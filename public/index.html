@@ -8009,84 +8009,131 @@ function closeNaborModal() {
   document.getElementById('naborModal').style.display = 'none';
 }
 
+// Slovak diacritics fixer for jsPDF helvetica (global)
+// Helvetica (WinAnsiEncoding) SUPPORTS: á,Á,ä,é,É,í,Í,ó,Ó,ô,Ô,ú,Ú,ü,ý,Ý,š,Š,ž,Ž
+// Helvetica DOES NOT support: č,Č,ď,Ď,ě,ľ,Ľ,ĺ,Ĺ,ň,Ň,ŕ,Ŕ,ť,Ť
+const _diaMap = {
+  '\u010d':'c','\u010c':'C',         // č,Č
+  '\u010f':'d','\u010e':'D',         // ď,Ď
+  '\u011b':'e',                       // ě
+  '\u013e':'l','\u013d':'L',         // ľ,Ľ
+  '\u013a':'l','\u0139':'L',         // ĺ,Ĺ
+  '\u0148':'n','\u0147':'N',         // ň,Ň
+  '\u0155':'r','\u0154':'R',         // ŕ,Ŕ
+  '\u0165':'t','\u0164':'T',         // ť,Ť
+  '\u20ac':'EUR','\u2022':'*','\u2605':'*'
+};
+function sk(str) {
+  if (!str) return '';
+  return str.replace(/[\u010c\u010d\u010e\u010f\u011b\u013a\u0139\u013d\u013e\u0147\u0148\u0154\u0155\u0164\u0165\u20ac\u2022\u2605]/g, ch => _diaMap[ch] || ch);
+}
+
 function generateNaborPDF() {
   const type = document.getElementById('nabor-type').value;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pw = doc.internal.pageSize.getWidth();
-  const margin = 15;
+  const margin = 14;
   const contentW = pw - margin * 2;
-  let y = 15;
+  let y = 14;
 
   function checkPage(needed) {
-    if (y + needed > 275) { doc.addPage(); y = 15; }
+    if (y + needed > 278) { doc.addPage(); y = 14; }
   }
 
   function sectionTitle(title) {
-    checkPage(12);
+    checkPage(14);
+    y += 1;
     doc.setFillColor(11, 42, 60);
-    doc.roundedRect(margin, y, contentW, 7, 1, 1, 'F');
+    doc.roundedRect(margin, y, contentW, 7.5, 1.5, 1.5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
-    doc.text(title.toUpperCase(), margin + 4, y + 5);
-    y += 10;
+    doc.text(sk(title.toUpperCase()), margin + 4, y + 5.2);
+    y += 10.5;
     doc.setTextColor(30, 30, 30);
   }
 
   function fieldRow(label, value) {
     if (!value) return;
-    checkPage(7);
+    const valText = sk(value);
+    const labText = sk(label);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    const labW = doc.getTextWidth(labText + ':') + 3;
+    const valColX = margin + Math.max(labW + 2, 42);
+    const valMaxW = contentW - (valColX - margin) - 2;
+    const lines = doc.splitTextToSize(valText, valMaxW);
+    const rowH = Math.max(5.5, lines.length * 3.8);
+    checkPage(rowH + 1);
+    // Light bg stripe
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentW, rowH, 0.5, 0.5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text(label + ':', margin + 2, y + 4);
+    doc.setFontSize(7.5);
+    doc.setTextColor(70, 70, 80);
+    doc.text(labText + ':', margin + 2, y + 3.8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(20, 20, 20);
-    const labelW = 52;
-    const lines = doc.splitTextToSize(value, contentW - labelW - 4);
-    doc.text(lines, margin + labelW, y + 4);
-    y += Math.max(6, lines.length * 4.5);
+    doc.text(lines, valColX, y + 3.8);
+    y += rowH + 0.8;
   }
 
   function fieldRow2(l1, v1, l2, v2) {
     if (!v1 && !v2) return;
-    checkPage(7);
-    const half = contentW / 2;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
+    checkPage(6.5);
+    const half = contentW / 2 - 1;
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentW, 5.5, 0.5, 0.5, 'F');
+    doc.setFontSize(7.5);
     if (v1) {
-      doc.text(l1 + ':', margin + 2, y + 4);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(70, 70, 80);
+      const l1t = sk(l1);
+      doc.text(l1t + ':', margin + 2, y + 3.8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 20);
-      doc.text(v1, margin + 38, y + 4);
+      const l1w = doc.getTextWidth(l1t + ':') + 3;
+      const v1t = sk(v1);
+      const v1x = margin + Math.max(l1w + 2, 30);
+      const v1max = half - (v1x - margin);
+      doc.text(v1max > 10 ? doc.splitTextToSize(v1t, v1max)[0] : v1t, v1x, y + 3.8);
     }
     if (v2) {
+      const col2 = margin + half + 3;
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(80, 80, 80);
-      doc.text(l2 + ':', margin + half + 2, y + 4);
+      doc.setTextColor(70, 70, 80);
+      const l2t = sk(l2);
+      doc.text(l2t + ':', col2, y + 3.8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(20, 20, 20);
-      doc.text(v2, margin + half + 38, y + 4);
+      const l2w = doc.getTextWidth(l2t + ':') + 3;
+      const v2t = sk(v2);
+      const v2x = col2 + Math.max(l2w + 2, 30);
+      const v2max = (margin + contentW) - v2x - 1;
+      doc.text(v2max > 10 ? doc.splitTextToSize(v2t, v2max)[0] : v2t, v2x, y + 3.8);
     }
-    y += 6;
+    y += 6.3;
   }
 
   function multilineField(label, value) {
     if (!value) return;
-    checkPage(12);
+    const labText = sk(label);
+    const valText = sk(value);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    const lines = doc.splitTextToSize(valText, contentW - 8);
+    const totalH = 5 + lines.length * 3.8 + 2;
+    checkPage(totalH);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentW, totalH, 0.5, 0.5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text(label + ':', margin + 2, y + 4);
-    y += 5;
+    doc.setTextColor(70, 70, 80);
+    doc.text(labText + ':', margin + 2, y + 3.8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(20, 20, 20);
-    const lines = doc.splitTextToSize(value, contentW - 6);
-    checkPage(lines.length * 4.5);
-    doc.text(lines, margin + 4, y + 3);
-    y += lines.length * 4.5 + 2;
+    doc.text(lines, margin + 4, y + 8);
+    y += totalH + 0.8;
   }
 
   // HEADER
@@ -8095,7 +8142,7 @@ function generateNaborPDF() {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(255, 255, 255);
-  const headerText = type === 'byt' ? 'PRACOVNÝ LIST - BYT' : 'PRACOVNÝ LIST - RODINNÝ DOM';
+  const headerText = type === 'byt' ? sk('PRACOVNÝ LIST - BYT') : sk('PRACOVNÝ LIST - RODINNÝ DOM');
   doc.text(headerText, pw / 2, y + 8.5, { align: 'center' });
   y += 17;
 
@@ -8260,9 +8307,8 @@ function generateNaborPDF() {
   y += 5;
   doc.setFontSize(7);
   doc.setTextColor(150, 150, 150);
-  doc.text('Vygenerované v SecPro • ' + new Date().toLocaleDateString('sk-SK'), pw / 2, y, { align: 'center' });
+  doc.text(sk('Vygenerované v SecPro') + ' | ' + new Date().toLocaleDateString('sk-SK'), pw / 2, y, { align: 'center' });
 
-  const propTitle = document.getElementById('nabor-prop-id').value;
   const filename = type === 'byt' ? 'Naborovy_list_BYT.pdf' : 'Naborovy_list_DOM.pdf';
   doc.save(filename);
 }
@@ -8463,12 +8509,12 @@ function generateProtocolPDF() {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Protokol o prehliadke', margin, 18);
+  doc.text(sk('Protokol o prehliadke'), margin, 18);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('nehnuteľnosti', margin, 26);
+  doc.text(sk('nehnuteľnosti'), margin, 26);
   doc.setFontSize(9);
-  doc.text('SecPro \u2022 ' + new Date().toLocaleDateString('sk-SK'), w - margin, 26, { align: 'right' });
+  doc.text('SecPro | ' + new Date().toLocaleDateString('sk-SK'), w - margin, 26, { align: 'right' });
 
   // Accent line
   doc.setFillColor(46, 196, 212);
@@ -8483,16 +8529,16 @@ function generateProtocolPDF() {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(11, 42, 60);
-  doc.text('Informácie o nehnuteľnosti', margin + 4, y + 2);
+  doc.text(sk('Informácie o nehnuteľnosti'), margin + 4, y + 2);
   y += 9;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(80, 80, 80);
   const propInfo = [
-    ['Názov:', p.title || '-'],
-    ['Adresa:', [p.address, p.city, p.district].filter(Boolean).join(', ') || '-'],
+    [sk('Názov:'), sk(p.title || '-')],
+    [sk('Adresa:'), sk([p.address, p.city, p.district].filter(Boolean).join(', ') || '-')],
     ['Cena:', p.price ? p.price.toLocaleString('sk-SK') + ' EUR' : '-'],
-    ['Vlastník:', p.owner || '-'],
+    [sk('Vlastník:'), sk(p.owner || '-')],
   ];
   propInfo.forEach(([label, val]) => {
     doc.setFont('helvetica', 'bold');
@@ -8510,7 +8556,7 @@ function generateProtocolPDF() {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(11, 42, 60);
-  doc.text('Údaje o prehliadke', margin + 4, y + 2);
+  doc.text(sk('Údaje o prehliadke'), margin + 4, y + 2);
   y += 9;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
@@ -8518,9 +8564,9 @@ function generateProtocolPDF() {
   const d = v.date ? new Date(v.date) : null;
   const ds = d ? d.toLocaleDateString('sk-SK') + ' ' + d.toLocaleTimeString('sk-SK', {hour:'2-digit',minute:'2-digit'}) : '-';
   const viewInfo = [
-    ['Dátum:', ds],
-    ['Záujemca:', v.personName || '-'],
-    ['Spôsob:', VIEWING_TYPE_MAP[v.type] || v.type],
+    [sk('Dátum:'), sk(ds)],
+    [sk('Záujemca:'), sk(v.personName || '-')],
+    [sk('Spôsob:'), sk(VIEWING_TYPE_MAP[v.type] || v.type)],
   ];
   viewInfo.forEach(([label, val]) => {
     doc.setFont('helvetica', 'bold');
@@ -8537,12 +8583,12 @@ function generateProtocolPDF() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(11, 42, 60);
-    doc.text('Poznámky', margin, y);
+    doc.text(sk('Poznámky'), margin, y);
     y += 6;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
-    const lines = doc.splitTextToSize(notes, cw - 4);
+    const lines = doc.splitTextToSize(sk(notes), cw - 4);
     doc.text(lines, margin + 2, y);
     y += lines.length * 4.5 + 4;
   }
@@ -8552,12 +8598,12 @@ function generateProtocolPDF() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(11, 42, 60);
-    doc.text('Spätná väzba z prehliadky', margin, y);
+    doc.text(sk('Spätná väzba z prehliadky'), margin, y);
     y += 6;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(80, 80, 80);
-    const fbLines = doc.splitTextToSize(v.feedback, cw - 4);
+    const fbLines = doc.splitTextToSize(sk(v.feedback), cw - 4);
     doc.text(fbLines, margin + 2, y);
     y += fbLines.length * 4.5 + 4;
   }
@@ -8573,7 +8619,7 @@ function generateProtocolPDF() {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(11, 42, 60);
-  doc.text('Podpisy', margin, y);
+  doc.text(sk('Podpisy'), margin, y);
   y += 8;
 
   const sigW = (cw - 12) / 2;
@@ -8583,7 +8629,7 @@ function generateProtocolPDF() {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(100, 100, 100);
-  doc.text('MAKLÉŘ', margin, y);
+  doc.text(sk('MAKLÉR'), margin, y);
   y += 3;
   doc.setDrawColor(220, 225, 230);
   doc.setLineWidth(0.5);
@@ -8595,7 +8641,7 @@ function generateProtocolPDF() {
   // Client sig
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('ZÁUJEMCA', margin + sigW + 12, y - 3);
+  doc.text(sk('ZÁUJEMCA'), margin + sigW + 12, y - 3);
   doc.roundedRect(margin + sigW + 12, y, sigW, sigH, 2, 2);
 
   const clientImg = clientPad.toDataURL();
@@ -8607,8 +8653,8 @@ function generateProtocolPDF() {
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
-  doc.text(brokerName, margin + sigW / 2, y, { align: 'center' });
-  doc.text(clientName, margin + sigW + 12 + sigW / 2, y, { align: 'center' });
+  doc.text(sk(brokerName), margin + sigW / 2, y, { align: 'center' });
+  doc.text(sk(clientName), margin + sigW + 12 + sigW / 2, y, { align: 'center' });
   y += 3;
 
   // Underlines
@@ -8623,7 +8669,7 @@ function generateProtocolPDF() {
   doc.rect(0, pageH - 14, w, 14, 'F');
   doc.setFontSize(7);
   doc.setTextColor(160, 170, 180);
-  doc.text('Dokument vygenerovaný aplikáciou SecPro \u2022 ' + new Date().toLocaleString('sk-SK'), w / 2, pageH - 6, { align: 'center' });
+  doc.text(sk('Dokument vygenerovaný aplikáciou SecPro') + ' | ' + new Date().toLocaleString('sk-SK'), w / 2, pageH - 6, { align: 'center' });
 
   doc.save('protokol_prehliadka_' + (p.title || 'nehnutelnost').replace(/\s+/g, '_').slice(0, 25) + '.pdf');
   closeProtocolModal();
@@ -8647,11 +8693,11 @@ function generateViewingDocument(propId) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('Zápisnica o prehliadkach', 14, 18);
+  doc.text(sk('Zápisnica o prehliadkach'), 14, 18);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(p.title || 'Nehnuteľnosť', 14, 27);
-  doc.text('Vygenerované: ' + new Date().toLocaleDateString('sk-SK'), w - 14, 27, { align: 'right' });
+  doc.text(sk(p.title || 'Nehnuteľnosť'), 14, 27);
+  doc.text(sk('Vygenerované: ') + new Date().toLocaleDateString('sk-SK'), w - 14, 27, { align: 'right' });
 
   let y = 45;
   doc.setTextColor(0, 0, 0);
@@ -8659,15 +8705,15 @@ function generateViewingDocument(propId) {
   // Property info
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Informácie o nehnuteľnosti', 14, y);
+  doc.text(sk('Informácie o nehnuteľnosti'), 14, y);
   y += 8;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const info = [
-    ['Adresa:', [p.address, p.city, p.district].filter(Boolean).join(', ')],
+    ['Adresa:', sk([p.address, p.city, p.district].filter(Boolean).join(', '))],
     ['Cena:', p.price ? p.price.toLocaleString('sk-SK') + ' EUR' : '-'],
-    ['Vlastník:', p.owner || '-'],
-    ['Telefón:', p.phone || '-'],
+    [sk('Vlastník:'), sk(p.owner || '-')],
+    [sk('Telefón:'), sk(p.phone || '-')],
   ];
   info.forEach(([label, val]) => {
     doc.setFont('helvetica', 'bold');
@@ -8680,17 +8726,18 @@ function generateViewingDocument(propId) {
   y += 6;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Zoznam prehliadok (' + viewings.length + ')', 14, y);
+  doc.text(sk('Zoznam prehliadok (') + viewings.length + ')', 14, y);
+
   y += 4;
 
   // Viewings table
-  const tableHead = [['Dátum', 'Záujemca', 'Spôsob', 'Výsledok', 'Spätná väzba']];
+  const tableHead = [[sk('Dátum'), sk('Záujemca'), sk('Spôsob'), sk('Výsledok'), sk('Spätná väzba')]];
   const tableBody = viewings.map(v => {
     const d = v.date ? new Date(v.date) : null;
     const ds = d ? d.toLocaleDateString('sk-SK') + ' ' + d.toLocaleTimeString('sk-SK', {hour:'2-digit',minute:'2-digit'}) : '';
-    const r = (VIEWING_RESULT_MAP[v.result] || {}).label || v.result;
-    const t = VIEWING_TYPE_MAP[v.type] || v.type;
-    return [ds, v.personName || '-', t, r, v.feedback || '-'];
+    const r = sk((VIEWING_RESULT_MAP[v.result] || {}).label || v.result);
+    const t = sk(VIEWING_TYPE_MAP[v.type] || v.type);
+    return [ds, sk(v.personName || '-'), t, r, sk(v.feedback || '-')];
   });
   doc.autoTable({
     startY: y,
@@ -8709,13 +8756,13 @@ function generateViewingDocument(propId) {
   if (interested.length > 0) {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('Záujemcovia (' + interested.length + ')', 14, y);
+    doc.text(sk('Záujemcovia (') + interested.length + ')', 14, y);
     y += 4;
-    const intHead = [['Meno', 'Telefón', 'E-mail', 'Záujem', 'Poznámka']];
+    const intHead = [['Meno', sk('Telefón'), 'E-mail', sk('Záujem'), sk('Poznámka')]];
     const intBody = interested.map(p => [
-      p.name, p.phone || '-', p.email || '-',
-      '\u2605'.repeat(p.rating || 0),
-      p.note || '-'
+      sk(p.name), sk(p.phone || '-'), sk(p.email || '-'),
+      '*'.repeat(p.rating || 0),
+      sk(p.note || '-')
     ]);
     doc.autoTable({
       startY: y,
