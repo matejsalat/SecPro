@@ -7,11 +7,12 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { apiKey, model, property, sampleAds, mode } = req.body;
+    const { provider, apiKey, model, property, sampleAds, mode } = req.body;
 
     if (!apiKey) return res.status(400).json({ error: 'API kľúč je povinný' });
     if (!property) return res.status(400).json({ error: 'Údaje o nehnuteľnosti sú povinné' });
 
+    const selectedProvider = provider || 'anthropic';
     const selectedModel = model || 'claude-sonnet-4-6';
 
     // Build property details string
@@ -44,36 +45,168 @@ module.exports = async function handler(req, res) {
       userPrompt = `Napíš profesionálny popis inzerátu pre túto nehnuteľnosť:\n\n${detailsStr}\n\nPopis by mal mať 3-5 odstavcov a mal by zahŕňať:\n- Úvodné zhrnutie\n- Popis dispozície a vybavenia\n- Okolie a občianska vybavenosť\n- Záver s výzvou`;
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        max_tokens: mode === 'headline' ? 100 : 1024,
-        messages: [{ role: 'user', content: userPrompt }],
-        system: systemPrompt,
-      }),
-    });
+    const maxTokens = mode === 'headline' ? 100 : 1024;
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      const errMsg = errData.error?.message || `API chyba: ${response.status}`;
-      return res.status(response.status).json({ error: errMsg });
+    // Route to provider
+    let result;
+    switch (selectedProvider) {
+      case 'anthropic':
+        result = await callAnthropic(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        break;
+      case 'openai':
+        result = await callOpenAI(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        break;
+      case 'google':
+        result = await callGoogle(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        break;
+      case 'groq':
+        result = await callGroq(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        break;
+      case 'openrouter':
+        result = await callOpenRouter(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        break;
+      default:
+        return res.status(400).json({ error: `Neznámy poskytovateľ: ${selectedProvider}` });
     }
 
-    const data = await response.json();
-    const text = data.content?.[0]?.text || '';
-
     return res.status(200).json({
-      text: text.trim(),
+      text: result.text.trim(),
       model: selectedModel,
-      usage: data.usage || {},
+      provider: selectedProvider,
+      usage: result.usage || {},
     });
   } catch (err) {
-    return res.status(500).json({ error: `Serverová chyba: ${err.message}` });
+    const status = err.status || 500;
+    return res.status(status).json({ error: err.message || `Serverová chyba` });
   }
 };
+
+// ── Anthropic (Claude) ──
+async function callAnthropic(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw { status: response.status, message: err.error?.message || `Anthropic API chyba: ${response.status}` };
+  }
+
+  const data = await response.json();
+  return { text: data.content?.[0]?.text || '', usage: data.usage };
+}
+
+// ── OpenAI (GPT) ──
+async function callOpenAI(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw { status: response.status, message: err.error?.message || `OpenAI API chyba: ${response.status}` };
+  }
+
+  const data = await response.json();
+  return { text: data.choices?.[0]?.message?.content || '', usage: data.usage };
+}
+
+// ── Google (Gemini) ──
+async function callGoogle(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { maxOutputTokens: maxTokens },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw { status: response.status, message: err.error?.message || `Google API chyba: ${response.status}` };
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return { text, usage: data.usageMetadata || {} };
+}
+
+// ── Groq ──
+async function callGroq(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw { status: response.status, message: err.error?.message || `Groq API chyba: ${response.status}` };
+  }
+
+  const data = await response.json();
+  return { text: data.choices?.[0]?.message?.content || '', usage: data.usage };
+}
+
+// ── OpenRouter ──
+async function callOpenRouter(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw { status: response.status, message: err.error?.message || `OpenRouter API chyba: ${response.status}` };
+  }
+
+  const data = await response.json();
+  return { text: data.choices?.[0]?.message?.content || '', usage: data.usage };
+}
