@@ -113,6 +113,50 @@
     .sidebar-title.collapsed .chevron { transform: rotate(-90deg); }
     .sidebar-section { overflow: hidden; transition: max-height 0.3s ease, opacity 0.25s ease; max-height: 500px; opacity: 1; }
     .sidebar-section.collapsed { max-height: 0; opacity: 0; }
+
+    /* Section-specific color accents */
+    .sidebar-global {
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
+      border-bottom: 1px solid rgba(46,196,212,0.1);
+    }
+    .sidebar-global .nav-item.active {
+      border-left-color: #2EC4D4;
+      color: #2EC4D4;
+    }
+
+    .sidebar-title[data-section="nehnutelnosti"] { color: rgba(52,211,153,0.7); }
+    .sidebar-title[data-section="nehnutelnosti"]:hover { color: rgba(52,211,153,1); }
+    .sidebar-title[data-section="nehnutelnosti"] + .sidebar-section .nav-item.active {
+      border-left-color: #34d399;
+      color: #34d399;
+      background: rgba(52,211,153,0.08);
+    }
+
+    .sidebar-title[data-section="kalkulacky"] { color: rgba(96,165,250,0.7); }
+    .sidebar-title[data-section="kalkulacky"]:hover { color: rgba(96,165,250,1); }
+    .sidebar-title[data-section="kalkulacky"] + .sidebar-section .nav-item.active {
+      border-left-color: #60a5fa;
+      color: #60a5fa;
+      background: rgba(96,165,250,0.08);
+    }
+
+    .sidebar-title[data-section="hypoteky"] { color: rgba(129,140,248,0.7); }
+    .sidebar-title[data-section="hypoteky"]:hover { color: rgba(129,140,248,1); }
+    .sidebar-title[data-section="hypoteky"] + .sidebar-section .nav-item.active {
+      border-left-color: #818cf8;
+      color: #818cf8;
+      background: rgba(129,140,248,0.08);
+    }
+
+    .sidebar-title[data-section="metodika"] { color: rgba(156,163,175,0.7); }
+    .sidebar-title[data-section="metodika"]:hover { color: rgba(156,163,175,1); }
+    .sidebar-title[data-section="metodika"] + .sidebar-section .nav-item.active {
+      border-left-color: #9ca3af;
+      color: #9ca3af;
+      background: rgba(156,163,175,0.08);
+    }
+
     .nav-item {
       display: flex;
       align-items: center;
