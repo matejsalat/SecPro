@@ -4695,6 +4695,7 @@
 // Initialize Lucide icons
 document.addEventListener('DOMContentLoaded', function() {
   lucide.createIcons();
+  restoreSidebarState();
   if (typeof updateHomeStats === 'function') updateHomeStats();
   // Allow decimal comma in all number inputs — convert comma to dot
   document.addEventListener('keydown', function(e) {
@@ -4722,6 +4723,28 @@ function toggleSection(titleEl) {
   if (!section || !section.classList.contains('sidebar-section')) return;
   titleEl.classList.toggle('collapsed');
   section.classList.toggle('collapsed');
+
+  // Save collapse state to localStorage
+  const sectionName = titleEl.getAttribute('data-section');
+  if (sectionName) {
+    const states = JSON.parse(localStorage.getItem('secpro-sidebar-state') || '{}');
+    states[sectionName] = titleEl.classList.contains('collapsed');
+    localStorage.setItem('secpro-sidebar-state', JSON.stringify(states));
+  }
+}
+
+function restoreSidebarState() {
+  const states = JSON.parse(localStorage.getItem('secpro-sidebar-state') || '{}');
+  Object.keys(states).forEach(function(sectionName) {
+    if (states[sectionName]) {
+      const titleEl = document.querySelector('.sidebar-title[data-section="' + sectionName + '"]');
+      if (titleEl) {
+        titleEl.classList.add('collapsed');
+        var section = titleEl.nextElementSibling;
+        if (section) section.classList.add('collapsed');
+      }
+    }
+  });
 }
 
 function showPage(id) {
