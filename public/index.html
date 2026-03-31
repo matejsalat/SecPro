@@ -1163,6 +1163,118 @@
     .stat-info { display: flex; flex-direction: column; }
     .stat-value { font-size: 1.35rem; font-weight: 800; color: var(--primary-dark); line-height: 1.2; }
     .stat-label { font-size: 0.72rem; color: var(--text-light); font-weight: 500; margin-top: 2px; }
+    .stat-card.clickable { cursor: pointer; transition: all 0.2s ease; }
+    .stat-card.clickable:hover { border-color: rgba(46,196,212,0.3); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    /* ===== DASHBOARD ===== */
+    .dash-pipeline {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 1.5rem 1.75rem; margin-bottom: 1.75rem; border: 1px solid rgba(0,0,0,0.04);
+    }
+    .dash-pipeline-title {
+      font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dash-funnel { display: flex; align-items: stretch; gap: 0; overflow-x: auto; }
+    .dash-funnel-stage {
+      flex: 1; min-width: 90px; padding: 1rem 0.5rem; text-align: center;
+      cursor: pointer; position: relative; transition: all 0.2s; border-radius: 0;
+    }
+    .dash-funnel-stage:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+    .dash-funnel-stage:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .dash-funnel-stage:hover { filter: brightness(0.93); transform: translateY(-2px); }
+    .dash-funnel-count {
+      font-size: 1.65rem; font-weight: 800; font-family: 'JetBrains Mono', 'Inter', monospace; line-height: 1.2;
+    }
+    .dash-funnel-label {
+      font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; opacity: 0.8;
+    }
+    .dash-funnel-icon { font-size: 1.1rem; margin-bottom: 4px; }
+    .dash-charts-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;
+    }
+    .dash-chart-card {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 1.5rem; border: 1px solid rgba(0,0,0,0.04);
+    }
+    .dash-chart-card-title {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dash-chart-canvas { position: relative; height: 220px; }
+    .dash-actions-row {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem; margin-bottom: 1.75rem;
+    }
+    .dash-action-btn {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 1.15rem 1rem; border: 1px solid rgba(0,0,0,0.04); cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 0.75rem;
+      font-family: 'Inter', sans-serif; text-align: left;
+    }
+    .dash-action-btn:hover { border-color: rgba(46,196,212,0.4); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .dash-action-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .dash-action-icon svg { width: 20px; height: 20px; stroke-width: 1.75; }
+    .dash-action-label { font-weight: 600; font-size: 0.82rem; color: var(--primary-dark); }
+    .dash-action-sub { font-size: 0.7rem; color: var(--text-light); margin-top: 2px; }
+    .dash-bottom-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;
+    }
+    .dash-card {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 1.5rem 1.75rem; border: 1px solid rgba(0,0,0,0.04);
+    }
+    .dash-section-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+    }
+    .dash-section-title {
+      font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--primary-dark); display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dash-section-link {
+      font-size: 0.78rem; font-weight: 600; color: #1A7A8A; cursor: pointer;
+      text-decoration: none; transition: color 0.15s;
+    }
+    .dash-section-link:hover { color: var(--accent); text-decoration: underline; }
+    .dash-recent-item {
+      display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+    }
+    .dash-recent-item:last-child { border-bottom: none; }
+    .dash-recent-item:hover { background: #F7FAFA; margin: 0 -0.75rem; padding-left: 0.75rem; padding-right: 0.75rem; border-radius: var(--radius-sm); }
+    .dash-recent-thumb {
+      width: 48px; height: 48px; border-radius: 10px;
+      background: linear-gradient(135deg, #0B2A3C, #1A7A8A); flex-shrink: 0;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.3);
+    }
+    .dash-recent-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .dash-recent-info { flex: 1; min-width: 0; }
+    .dash-recent-name { font-weight: 600; font-size: 0.88rem; color: var(--primary-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dash-recent-meta { font-size: 0.75rem; color: var(--text-light); display: flex; gap: 0.75rem; align-items: center; margin-top: 2px; flex-wrap: wrap; }
+    .dash-recent-price { font-weight: 700; color: #1A7A8A; font-size: 0.88rem; font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+    .dash-contact-item {
+      display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+    }
+    .dash-contact-item:last-child { border-bottom: none; }
+    .dash-contact-item:hover { background: #F7FAFA; margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 8px; }
+    .dash-contact-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #0B2A3C, #1A7A8A); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+    }
+    .dash-contact-info { flex: 1; min-width: 0; }
+    .dash-contact-name { font-weight: 600; font-size: 0.84rem; color: var(--primary-dark); }
+    .dash-contact-detail { font-size: 0.72rem; color: var(--text-light); }
+    .dash-empty-state { text-align: center; padding: 2rem; color: var(--text-light); font-size: 0.85rem; }
+    @media (max-width: 768px) {
+      .dash-charts-row { grid-template-columns: 1fr; }
+      .dash-bottom-row { grid-template-columns: 1fr; }
+    }
     .section-heading {
       font-size: 0.82rem;
       font-weight: 700;
@@ -2623,95 +2735,131 @@
   <div class="main-content">
     <!-- HOME -->
     <div id="page-home" class="page active">
-      <div class="welcome-hero">
-        <h1>Vitajte v SecPro</h1>
-        <p>Komplexný nástroj pre finančných poradcov na tvorbu finančných plánov</p>
-      </div>
-      <div class="section-heading"><i data-lucide="calculator" style="width:18px;height:18px;stroke-width:2"></i> Kalkulačky</div>
-      <div class="calc-grid">
-        <div class="calc-card" onclick="showPage('investovanie')">
-          <div class="calc-card-icon"><i data-lucide="trending-up"></i></div>
-          <div class="calc-card-title">Investovanie</div>
-          <div class="calc-card-desc">Výpočet rastu investície s pravidelným vkladom</div>
-        </div>
-        <div class="calc-card" onclick="showPage('milionova')">
-          <div class="calc-card-icon"><i data-lucide="target"></i></div>
-          <div class="calc-card-title">Miliónová kalkulačka</div>
-          <div class="calc-card-desc">Koľko investovať pre dosiahnutie cieľa</div>
-        </div>
-        <div class="calc-card" onclick="showPage('renta')">
-          <div class="calc-card-icon"><i data-lucide="wallet"></i></div>
-          <div class="calc-card-title">Mesačná renta</div>
-          <div class="calc-card-desc">Výpočet mesačnej renty z nasporenej sumy</div>
-        </div>
-        <div class="calc-card" onclick="showPage('finmath')">
-          <div class="calc-card-icon"><i data-lucide="calculator"></i></div>
-          <div class="calc-card-title">Finančná matematika</div>
-          <div class="calc-card-desc">Zložené úročenie, budúca a súčasná hodnota</div>
-        </div>
-        <div class="calc-card" onclick="showPage('pilier')">
-          <div class="calc-card-icon"><i data-lucide="shield-check"></i></div>
-          <div class="calc-card-title">II. Pilier</div>
-          <div class="calc-card-desc">Prepočet hodnoty fondov II. dôchodkového piliera</div>
-        </div>
-        <div class="calc-card" onclick="showPage('hypoteka')">
-          <div class="calc-card-icon"><i data-lucide="building-2"></i></div>
-          <div class="calc-card-title">Hypotéka + Investícia</div>
-          <div class="calc-card-desc">Financovanie bývania pomocou investičnej stratégie</div>
-        </div>
-        <div class="calc-card" onclick="showPage('rezerva')">
-          <div class="calc-card-icon"><i data-lucide="piggy-bank"></i></div>
-          <div class="calc-card-title">Tvorba rezervy</div>
-          <div class="calc-card-desc">Sporenie na finančnú rezervu</div>
-        </div>
-        <div class="calc-card" onclick="showPage('dividenda')">
-          <div class="calc-card-icon"><i data-lucide="coins"></i></div>
-          <div class="calc-card-title">Dividendové fondy</div>
-          <div class="calc-card-desc">Orientačný prepočet dividendových fondov</div>
-        </div>
-      </div>
 
-      <div class="section-heading"><i data-lucide="home" style="width:18px;height:18px;stroke-width:2"></i> Hypotekárny modul</div>
-      <div class="featured-card" onclick="showPage('mhypoteka')">
-        <div class="featured-left">
-          <div class="featured-icon"><i data-lucide="home"></i></div>
-          <div>
-            <div class="featured-title">Hypotekárna kalkulačka</div>
-            <div class="featured-desc">Kompletný prepočet hypotéky s DSTI, LtV a PDF reportom</div>
+      <!-- KPI Stats Row -->
+      <div class="stats-row">
+        <div class="stat-card clickable" onclick="showPage('myproperties')">
+          <div class="stat-icon teal"><i data-lucide="home"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="dash-active-count">0</div>
+            <div class="stat-label">Aktívne nehnuteľnosti</div>
           </div>
         </div>
-        <div class="featured-modules">
-          <span class="featured-tag" onclick="event.stopPropagation();showPage('mhypoteka')">Jedna domácnosť</span>
-          <span class="featured-tag" onclick="event.stopPropagation();showPage('mhypoteka-multi')">Viac domácností</span>
-          <span class="featured-tag" onclick="event.stopPropagation();showPage('mhypoteka-rovne')">Rovné splátky</span>
-          <span class="featured-tag" onclick="event.stopPropagation();showPage('mhypoteka-klesajuce')">Klesajúce splátky</span>
+        <div class="stat-card clickable" onclick="showPage('myproperties')">
+          <div class="stat-icon blue"><i data-lucide="banknote"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="dash-portfolio-value">0 €</div>
+            <div class="stat-label">Hodnota portfólia</div>
+          </div>
         </div>
-      </div>
-
-      <div class="section-heading"><i data-lucide="bar-chart-3" style="width:18px;height:18px;stroke-width:2"></i> Úverová metodika</div>
-      <div class="featured-card" onclick="showPage('metodika')">
-        <div class="featured-left">
-          <div class="featured-icon blue"><i data-lucide="bar-chart-3"></i></div>
-          <div>
-            <div class="featured-title">Porovnanie bánk</div>
-            <div class="featured-desc">Porovnanie akceptácie príjmov naprieč bankami na Slovensku</div>
+        <div class="stat-card clickable" onclick="showPage('myproperties')">
+          <div class="stat-icon amber"><i data-lucide="eye"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="dash-viewings-count">0</div>
+            <div class="stat-label">Obhliadky celkom</div>
+          </div>
+        </div>
+        <div class="stat-card clickable" onclick="dashFilterByStatus('predana')">
+          <div class="stat-icon violet"><i data-lucide="check-circle"></i></div>
+          <div class="stat-info">
+            <div class="stat-value" id="dash-sold-count">0</div>
+            <div class="stat-label">Predané</div>
           </div>
         </div>
       </div>
 
-      <div class="section-heading"><i data-lucide="clipboard-list" style="width:18px;height:18px;stroke-width:2"></i> Analýza</div>
-      <div class="calc-grid" style="grid-template-columns: repeat(2, 1fr)">
-        <div class="calc-card" onclick="showPage('aof')">
-          <div class="calc-card-icon"><i data-lucide="clipboard-list"></i></div>
-          <div class="calc-card-title">Vstupné údaje klienta</div>
-          <div class="calc-card-desc">Kompletný formulár pre analýzu finančnej situácie</div>
+      <!-- Pipeline Funnel -->
+      <div class="dash-pipeline">
+        <div class="dash-pipeline-title">
+          <i data-lucide="git-branch" style="width:16px;height:16px;"></i>
+          Pipeline nehnuteľností
         </div>
-        <div class="calc-card" onclick="showPage('rozlozenie')">
-          <div class="calc-card-icon"><i data-lucide="pie-chart"></i></div>
-          <div class="calc-card-title">Rozloženie investície</div>
-          <div class="calc-card-desc">Optimálne rozloženie portfólia podľa rizikového profilu</div>
+        <div class="dash-funnel" id="dash-funnel"></div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="dash-charts-row">
+        <div class="dash-chart-card">
+          <div class="dash-chart-card-title">
+            <i data-lucide="pie-chart" style="width:15px;height:15px;"></i>
+            Podľa typu
+          </div>
+          <div class="dash-chart-canvas"><canvas id="dash-chart-type"></canvas></div>
+        </div>
+        <div class="dash-chart-card">
+          <div class="dash-chart-card-title">
+            <i data-lucide="bar-chart-3" style="width:15px;height:15px;"></i>
+            Cenové rozpätie
+          </div>
+          <div class="dash-chart-canvas"><canvas id="dash-chart-price"></canvas></div>
         </div>
       </div>
+
+      <!-- Quick Actions -->
+      <div class="section-heading"><i data-lucide="zap" style="width:18px;height:18px;stroke-width:2"></i> Rýchle akcie</div>
+      <div class="dash-actions-row">
+        <button class="dash-action-btn" onclick="showPage('myproperties'); setTimeout(()=>openPropertyForm(), 100);">
+          <div class="dash-action-icon" style="background:linear-gradient(135deg,#E5F5F1,#D0F0EA);color:#1A7A8A;">
+            <i data-lucide="plus-circle"></i>
+          </div>
+          <div>
+            <div class="dash-action-label">Pridať nehnuteľnosť</div>
+            <div class="dash-action-sub">Nový záznam do databázy</div>
+          </div>
+        </button>
+        <button class="dash-action-btn" onclick="showPage('contacts'); setTimeout(()=>openContactForm(), 100);">
+          <div class="dash-action-icon" style="background:linear-gradient(135deg,#E0F2FE,#BAE6FD);color:#0369A1;">
+            <i data-lucide="user-plus"></i>
+          </div>
+          <div>
+            <div class="dash-action-label">Nový kontakt</div>
+            <div class="dash-action-sub">Pridať klienta alebo partnera</div>
+          </div>
+        </button>
+        <button class="dash-action-btn" onclick="showPage('leads')">
+          <div class="dash-action-icon" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#B45309;">
+            <i data-lucide="search"></i>
+          </div>
+          <div>
+            <div class="dash-action-label">Hľadať nehnuteľnosti</div>
+            <div class="dash-action-sub">Vyhľadávanie v ponukách</div>
+          </div>
+        </button>
+        <button class="dash-action-btn" onclick="showPage('mhypoteka')">
+          <div class="dash-action-icon" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE);color:#7C3AED;">
+            <i data-lucide="calculator"></i>
+          </div>
+          <div>
+            <div class="dash-action-label">Hypotekárna kalkulačka</div>
+            <div class="dash-action-sub">Výpočet pre klienta</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Recent Properties + Recent Contacts -->
+      <div class="dash-bottom-row">
+        <div class="dash-card">
+          <div class="dash-section-header">
+            <div class="dash-section-title">
+              <i data-lucide="clock" style="width:15px;height:15px;"></i>
+              Posledné nehnuteľnosti
+            </div>
+            <span class="dash-section-link" onclick="showPage('myproperties')">Zobraziť všetky</span>
+          </div>
+          <div id="dash-recent-props-list"></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-section-header">
+            <div class="dash-section-title">
+              <i data-lucide="users" style="width:15px;height:15px;"></i>
+              Posledné kontakty
+            </div>
+            <span class="dash-section-link" onclick="showPage('contacts')">Zobraziť všetky</span>
+          </div>
+          <div id="dash-recent-contacts-list"></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- HISTORIA ANALYZ -->
@@ -5128,22 +5276,8 @@ function showPage(id) {
     }
   });
   if (id === 'historia' && typeof renderHistory === 'function') renderHistory();
-  if (id === 'home') updateHomeStats();
+  if (id === 'home') renderDashboard();
   window.scrollTo(0, 0);
-}
-
-function updateHomeStats() {
-  try {
-    const hist = JSON.parse(localStorage.getItem('finio-history') || '[]');
-    const el = document.getElementById('stat-saved');
-    const elLast = document.getElementById('stat-last');
-    if (el) el.textContent = hist.length;
-    if (elLast && hist.length > 0) {
-      const last = hist.sort((a, b) => b.id - a.id)[0];
-      const d = new Date(last.date);
-      elLast.textContent = d.toLocaleDateString('sk-SK', { day: 'numeric', month: 'short' });
-    }
-  } catch(e) {}
 }
 
 // ==================== HELPERS ====================
@@ -10521,12 +10655,224 @@ function enterApp(user) {
   document.getElementById('headerUserAvatar').textContent = initials;
 }
 
+// ==================== DASHBOARD ====================
+function renderDashboard() {
+  const props = getProperties();
+  const contacts = getContacts();
+
+  // --- KPI Metrics ---
+  const terminalStatuses = ['zamietnuty', 'stiahnuta'];
+  const activeProps = props.filter(p => !terminalStatuses.includes(p.status) && p.status !== 'predana' && p.status !== 'uzavrety');
+  const soldProps = props.filter(p => p.status === 'predana' || p.status === 'uzavrety');
+  const totalViewings = props.reduce((sum, p) => sum + ((p.viewings || []).length), 0);
+  const portfolioValue = activeProps.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
+
+  document.getElementById('dash-active-count').textContent = activeProps.length;
+  document.getElementById('dash-portfolio-value').textContent = portfolioValue > 0
+    ? (portfolioValue >= 1000000
+      ? (portfolioValue / 1000000).toFixed(1).replace('.', ',') + ' M\u20AC'
+      : portfolioValue.toLocaleString('sk-SK') + ' \u20AC')
+    : '0 \u20AC';
+  document.getElementById('dash-viewings-count').textContent = totalViewings;
+  document.getElementById('dash-sold-count').textContent = soldProps.length;
+
+  // --- Pipeline Funnel ---
+  renderDashPipeline(props);
+
+  // --- Charts ---
+  renderDashCharts(props);
+
+  // --- Recent Properties ---
+  renderDashRecentProps(props);
+
+  // --- Recent Contacts ---
+  renderDashRecentContacts(contacts);
+
+  // Reinitialize lucide icons for new DOM
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderDashPipeline(props) {
+  const container = document.getElementById('dash-funnel');
+  const counts = {};
+  PROP_PIPELINE.forEach(stage => { counts[stage.key] = 0; });
+
+  props.forEach(p => {
+    const idx = getPipelineIndex(p.status);
+    const key = PROP_PIPELINE[idx] ? PROP_PIPELINE[idx].key : 'novy';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  container.innerHTML = PROP_PIPELINE.map(stage => {
+    const count = counts[stage.key] || 0;
+    return '<div class="dash-funnel-stage" style="background:' + stage.color + '15;color:' + stage.color + ';" onclick="dashFilterByStatus(\'' + stage.key + '\')" title="' + stage.label + ': ' + count + '">' +
+      '<div class="dash-funnel-icon">' + stage.icon + '</div>' +
+      '<div class="dash-funnel-count" style="color:' + stage.color + ';">' + count + '</div>' +
+      '<div class="dash-funnel-label">' + stage.label + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function dashFilterByStatus(status) {
+  showPage('myproperties');
+  setTimeout(() => {
+    const ms = document.getElementById('ms-prop-status');
+    if (!ms) return;
+    // Deselect all
+    ms.querySelectorAll('.multi-select-option.selected').forEach(opt => opt.classList.remove('selected'));
+    // Select target status
+    const targetOpt = ms.querySelector('.multi-select-option[data-value="' + status + '"]');
+    if (targetOpt) {
+      targetOpt.classList.add('selected');
+      msUpdateTrigger(ms);
+    }
+    filterProperties();
+  }, 50);
+}
+
+function renderDashCharts(props) {
+  const active = props.filter(p => p.status !== 'zamietnuty' && p.status !== 'stiahnuta');
+
+  // --- Doughnut: Property type distribution ---
+  const typeCounts = {};
+  active.forEach(p => {
+    const label = PROP_TYPE_MAP[p.type] || p.type || 'Iný';
+    typeCounts[label] = (typeCounts[label] || 0) + 1;
+  });
+  const typeLabels = Object.keys(typeCounts);
+  const typeData = Object.values(typeCounts);
+  const typeColors = ['#0891B2', '#2563EB', '#7C3AED', '#D97706', '#16A34A', '#EA580C'];
+
+  const typeCanvas = document.getElementById('dash-chart-type');
+  if (typeLabels.length > 0 && typeCanvas) {
+    getOrCreateChart('dash-chart-type', {
+      type: 'doughnut',
+      data: {
+        labels: typeLabels,
+        datasets: [{ data: typeData, backgroundColor: typeColors.slice(0, typeLabels.length), borderWidth: 0, hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 } }
+        },
+        cutout: '65%'
+      }
+    });
+  } else if (typeCanvas) {
+    typeCanvas.parentElement.innerHTML = '<div class="dash-empty-state">Pridajte nehnuteľnosti pre zobrazenie grafu</div>';
+  }
+
+  // --- Bar: Price distribution ---
+  const brackets = [
+    { label: '< 100k', min: 0, max: 100000 },
+    { label: '100-200k', min: 100000, max: 200000 },
+    { label: '200-350k', min: 200000, max: 350000 },
+    { label: '350-500k', min: 350000, max: 500000 },
+    { label: '> 500k', min: 500000, max: Infinity }
+  ];
+  const priceData = brackets.map(b => active.filter(p => (Number(p.price) || 0) >= b.min && (Number(p.price) || 0) < b.max).length);
+  const hasPrice = active.some(p => Number(p.price) > 0);
+
+  const priceCanvas = document.getElementById('dash-chart-price');
+  if (hasPrice && priceCanvas) {
+    getOrCreateChart('dash-chart-price', {
+      type: 'bar',
+      data: {
+        labels: brackets.map(b => b.label),
+        datasets: [{ data: priceData, backgroundColor: 'rgba(46,196,212,0.6)', borderColor: 'rgba(46,196,212,1)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Inter', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+          x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  } else if (priceCanvas) {
+    priceCanvas.parentElement.innerHTML = '<div class="dash-empty-state">Pridajte nehnuteľnosti s cenou pre zobrazenie grafu</div>';
+  }
+}
+
+function renderDashRecentProps(props) {
+  const container = document.getElementById('dash-recent-props-list');
+  if (!container) return;
+
+  const sorted = [...props]
+    .sort((a, b) => new Date(b.lastModified || b.createdAt || 0) - new Date(a.lastModified || a.createdAt || 0))
+    .slice(0, 5);
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<div class="dash-empty-state">Zatiaľ žiadne nehnuteľnosti.<br><span class="dash-section-link" onclick="showPage(\'myproperties\'); setTimeout(()=>openPropertyForm(), 100);">Pridajte prvú</span></div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map(p => {
+    const st = PROP_STATUS_MAP[p.status] || PROP_STATUS_MAP['novy'];
+    const priceStr = p.price ? Number(p.price).toLocaleString('sk-SK') + ' \u20AC' : '\u2014';
+    const photo = (p.photos && p.photos.length > 0) ? p.photos[0] : '';
+    const dateStr = p.lastModified
+      ? new Date(p.lastModified).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short' })
+      : '';
+    const typeName = PROP_TYPE_MAP[p.type] || p.type || '';
+
+    return '<div class="dash-recent-item" onclick="showPage(\'myproperties\'); setTimeout(()=>openPropDetail(\'' + p.id + '\'), 100);">' +
+      '<div class="dash-recent-thumb">' +
+        (photo ? '<img src="' + photo + '" />' : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>') +
+      '</div>' +
+      '<div class="dash-recent-info">' +
+        '<div class="dash-recent-name">' + esc(p.title || 'Bez názvu') + '</div>' +
+        '<div class="dash-recent-meta">' +
+          '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.68rem;font-weight:600;background:' + st.bg + ';color:' + st.color + ';">' + st.label + '</span>' +
+          (typeName ? '<span>' + esc(typeName) + '</span>' : '') +
+          (p.city ? '<span>' + esc(p.city) + '</span>' : '') +
+          (dateStr ? '<span>' + dateStr + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="dash-recent-price">' + priceStr + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderDashRecentContacts(contacts) {
+  const container = document.getElementById('dash-recent-contacts-list');
+  if (!container) return;
+
+  const sorted = [...contacts]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+    .slice(0, 5);
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<div class="dash-empty-state">Zatiaľ žiadne kontakty.<br><span class="dash-section-link" onclick="showPage(\'contacts\'); setTimeout(()=>openContactForm(), 100);">Pridajte prvý</span></div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map(c => {
+    const initials = c.name ? c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?';
+    const cat = CONTACT_CATEGORY_LABELS[c.category] || c.category || '';
+    const st = CONTACT_STATUS_LABELS[c.status] || { label: c.status || '', color: '#999', bg: '#f0f0f0' };
+
+    return '<div class="dash-contact-item" onclick="showPage(\'contacts\'); setTimeout(()=>openContactForm(\'' + c.id + '\'), 100);">' +
+      '<div class="dash-contact-avatar">' + initials + '</div>' +
+      '<div class="dash-contact-info">' +
+        '<div class="dash-contact-name">' + esc(c.name) + '</div>' +
+        '<div class="dash-contact-detail">' + esc(cat) + (c.company ? ' \u00B7 ' + esc(c.company) : '') + '</div>' +
+      '</div>' +
+      '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.68rem;font-weight:600;background:' + st.bg + ';color:' + st.color + ';">' + st.label + '</span>' +
+    '</div>';
+  }).join('');
+}
+
 // Check session on page load
 (function checkAuth() {
   const session = getSession();
   if (session && session.name) {
     enterApp(session);
   }
+  // Render dashboard on initial load
+  renderDashboard();
 })();
 </script>
 </body>
