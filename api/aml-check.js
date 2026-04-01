@@ -201,7 +201,7 @@ function searchSanctions(query, birthDate, entries) {
       if (aliasScore > score) score = aliasScore;
     }
 
-    if (score < 0.45) continue;
+    if (score < 0.5) continue;
 
     // Birth date boost/penalty
     if (birthDate && entry.dob) {
@@ -299,8 +299,8 @@ function extractTag(xml, tag) {
 
 function determineStatus(matches) {
   if (matches.length === 0) return 'clear';
-  if (matches.some(m => m.score >= 0.85)) return 'hit';
-  if (matches.some(m => m.score >= 0.55)) return 'review';
+  if (matches.some(m => m.score >= 0.8)) return 'hit';
+  if (matches.some(m => m.score >= 0.65)) return 'review';
   return 'clear';
 }
 
