@@ -40,6 +40,16 @@ module.exports = async function handler(req, res) {
     }
 
     const query = name.trim();
+    const nQuery = normalize(query);
+
+    // Debug: find exact entry
+    const debugEntry = sanctionsEntries.find(e =>
+      e.normalizedName.includes('bout') || e.name.includes('BOUT')
+    );
+    const debugSample = sanctionsEntries.slice(0, 3).map(e => ({
+      name: e.name, normalized: e.normalizedName, list: e.list
+    }));
+
     const matches = searchSanctions(query, birthDate, sanctionsEntries);
 
     // Split by source for response
@@ -62,7 +72,9 @@ module.exports = async function handler(req, res) {
       },
       checkedAt: new Date().toISOString(),
       query,
+      normalizedQuery: nQuery,
       totalEntries: sanctionsEntries.length,
+      _debug: { boutEntry: debugEntry || 'NOT_FOUND', sampleEntries: debugSample },
       source: 'US OFAC SDN + UN Security Council Consolidated List (priame zdroje)'
     });
 
