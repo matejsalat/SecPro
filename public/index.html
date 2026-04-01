@@ -11146,6 +11146,11 @@ function openAmlForm(editId) {
     document.getElementById('aml-doc-id-preview').textContent = '';
     document.getElementById('aml-doc-funds-preview').textContent = '';
   }
+  // Always reset auto-check UI when opening form
+  document.getElementById('aml-check-status').style.display = 'none';
+  document.getElementById('aml-check-status').innerHTML = '';
+  document.getElementById('aml-check-matches').style.display = 'none';
+  document.getElementById('aml-check-matches').innerHTML = '';
   document.getElementById('aml-modal').style.display = 'block';
 }
 function closeAmlForm() { document.getElementById('aml-modal').style.display = 'none'; }
