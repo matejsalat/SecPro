@@ -4242,7 +4242,48 @@
                   <option value="other">Iné</option>
                 </select>
               </div>
+              <div class="form-group"><label>Účel kúpy</label>
+                <select id="aml-tx-buy-purpose" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);">
+                  <option value="byvanie">Bývanie</option>
+                  <option value="investicia">Investícia</option>
+                  <option value="podnikanie">Podnikanie</option>
+                  <option value="ine">Iné</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.5rem;">
               <div class="form-group"><label>Hodnota transakcie (€)</label><input type="number" id="aml-tx-value" min="0" /></div>
+              <div class="form-group"><label>Spôsob financovania</label>
+                <select id="aml-tx-financing" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);">
+                  <option value="hypo">Hypotekárny úver</option>
+                  <option value="vlastne">Vlastné zdroje</option>
+                  <option value="hotovost">Hotovosť</option>
+                  <option value="uver">Iný úver</option>
+                  <option value="kombinacia">Kombinácia</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.5rem;">
+              <div class="form-group"><label>Klient koná</label>
+                <select id="aml-tx-representation" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);">
+                  <option value="vlastne">Vo svojom mene</option>
+                  <option value="zastupenie">V zastúpení</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Hotovosť vyššia ako 50 000 €?</label>
+                <select id="aml-tx-cash50k" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);">
+                  <option value="nie">Nie</option>
+                  <option value="ano">Áno</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.5rem;">
+              <div class="form-group"><label>Vyhotovená fotokópia dokladu totožnosti?</label>
+                <select id="aml-tx-idcopy" style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid var(--border);">
+                  <option value="ano">Áno</option>
+                  <option value="nie">Nie</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -11062,6 +11103,9 @@ const AML_SOURCE_LABELS = {
 };
 const AML_DOC_LABELS = { op: 'Občiansky preukaz', pas: 'Cestovný pas', pobyt: 'Povolenie na pobyt' };
 const AML_PURPOSE_LABELS = { buy: 'Kúpa nehnuteľnosti', sell: 'Predaj nehnuteľnosti', rent: 'Prenájom', other: 'Iné' };
+const AML_BUY_PURPOSE_LABELS = { byvanie: 'Bývanie', investicia: 'Investícia', podnikanie: 'Podnikanie', ine: 'Iné' };
+const AML_FINANCING_LABELS = { hypo: 'Hypotéka', vlastne: 'Vlastné prostriedky', hotovost: 'Hotovosť', uver: 'Úver', kombinacia: 'Kombinácia' };
+const AML_REPRESENTATION_LABELS = { vlastne: 'Vo vlastnom mene', zastupenie: 'Na základe zastúpenia' };
 
 function openAmlForm(editId) {
   document.getElementById('aml-edit-id').value = editId || '';
@@ -11117,6 +11161,11 @@ function openAmlForm(editId) {
       document.getElementById('aml-register-note').value = r.registerNote || '';
       // Transaction
       document.getElementById('aml-tx-purpose').value = r.transactionPurpose || 'buy';
+      document.getElementById('aml-tx-buy-purpose').value = r.transactionBuyPurpose || 'byvanie';
+      document.getElementById('aml-tx-financing').value = r.transactionFinancing || 'hypo';
+      document.getElementById('aml-tx-representation').value = r.transactionRepresentation || 'vlastne';
+      document.getElementById('aml-tx-cash50k').value = r.transactionCash50k || 'nie';
+      document.getElementById('aml-tx-idcopy').value = r.transactionIdCopy || 'ano';
       document.getElementById('aml-tx-value').value = r.transactionValue || '';
       document.getElementById('aml-notes').value = r.notes || '';
       // Show existing doc names
@@ -11137,6 +11186,11 @@ function openAmlForm(editId) {
     document.getElementById('aml-fo-doctype').value = 'op';
     document.getElementById('aml-po-form').value = 'sro';
     document.getElementById('aml-tx-purpose').value = 'buy';
+    document.getElementById('aml-tx-buy-purpose').value = 'byvanie';
+    document.getElementById('aml-tx-financing').value = 'hypo';
+    document.getElementById('aml-tx-representation').value = 'vlastne';
+    document.getElementById('aml-tx-cash50k').value = 'nie';
+    document.getElementById('aml-tx-idcopy').value = 'ano';
     document.getElementById('aml-sanctions-result').value = 'pending';
     document.getElementById('aml-register-result').value = 'pending';
     document.querySelector('input[name="aml-pep"][value="no"]').checked = true;
@@ -11435,6 +11489,11 @@ function saveAml() {
     sourceOfFunds: sources,
     sourceOfFundsDetail: document.getElementById('aml-source-detail').value.trim(),
     transactionPurpose: document.getElementById('aml-tx-purpose').value,
+    transactionBuyPurpose: document.getElementById('aml-tx-buy-purpose').value,
+    transactionFinancing: document.getElementById('aml-tx-financing').value,
+    transactionRepresentation: document.getElementById('aml-tx-representation').value,
+    transactionCash50k: document.getElementById('aml-tx-cash50k').value,
+    transactionIdCopy: document.getElementById('aml-tx-idcopy').value,
     transactionValue: document.getElementById('aml-tx-value').value,
     notes: document.getElementById('aml-notes').value.trim(),
     updatedAt: new Date().toISOString()
@@ -11648,8 +11707,13 @@ function openAmlDetail(id) {
 
   // Source + Transaction
   html += '<div class="aml-form-section"><div class="aml-form-section-title">Transakcia & Prostriedky</div><div class="aml-detail-grid">';
-  html += amlDR('Účel', AML_PURPOSE_LABELS[r.transactionPurpose] || '—');
+  html += amlDR('Účel obchodu', AML_PURPOSE_LABELS[r.transactionPurpose] || '—');
+  html += amlDR('Účel nadobúdania', AML_BUY_PURPOSE_LABELS[r.transactionBuyPurpose] || '—');
   html += amlDR('Hodnota', r.transactionValue ? Number(r.transactionValue).toLocaleString('sk-SK') + ' €' : '—');
+  html += amlDR('Spôsob financovania', AML_FINANCING_LABELS[r.transactionFinancing] || '—');
+  html += amlDR('Zastúpenie', AML_REPRESENTATION_LABELS[r.transactionRepresentation] || '—');
+  html += amlDR('Hotovosť > 50 000 €', r.transactionCash50k === 'ano' ? '<span style="color:#EF4444;font-weight:600;">ÁNO</span>' : 'Nie');
+  html += amlDR('Kópia dokladu vyhotovená', r.transactionIdCopy === 'ano' ? 'Áno' : '<span style="color:#F59E0B;">Nie</span>');
   html += amlDR('Pôvod prostriedkov', (r.sourceOfFunds || []).map(s => AML_SOURCE_LABELS[s] || s).join(', ') || '—');
   if (r.sourceOfFundsDetail) html += amlDR('Detail', r.sourceOfFundsDetail);
   html += '</div></div>';
@@ -11755,9 +11819,12 @@ function generateAmlPdf() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pw = doc.internal.pageSize.getWidth();
-  const m = 15;
-  const cw = pw - 2 * m;
-  let y = m;
+  const mg = 15;
+  const cw = pw - 2 * mg;
+  let y = mg;
+
+  // Strip diacritics for jsPDF (no custom font needed)
+  function sd(s) { return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
 
   // Header
   doc.setFillColor(11, 42, 60);
@@ -11766,132 +11833,157 @@ function generateAmlPdf() {
   doc.rect(0, 32, pw, 2, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16); doc.setFont(undefined, 'bold');
-  doc.text('SecPro - AML Preverenie klienta', m, 14);
+  doc.text(sd('SecPro - AML Preverenie klienta'), mg, 14);
   doc.setFontSize(9); doc.setFont(undefined, 'normal');
-  doc.text('Zakon 297/2008 Z.z. | Datum: ' + new Date().toLocaleDateString('sk-SK'), m, 22);
-  doc.text('Dokument ID: ' + r.id, m, 28);
+  doc.text(sd('Zákon 297/2008 Z.z. | Dátum: ' + new Date().toLocaleDateString('sk-SK')), mg, 22);
+  doc.text('Dokument ID: ' + r.id, mg, 28);
   y = 40;
 
   function secTitle(title) {
+    if (y > 265) { doc.addPage(); y = mg; }
     doc.setFillColor(240, 242, 245);
-    doc.roundedRect(m, y, cw, 8, 2, 2, 'F');
+    doc.roundedRect(mg, y, cw, 8, 2, 2, 'F');
     doc.setTextColor(11, 42, 60); doc.setFontSize(9); doc.setFont(undefined, 'bold');
-    doc.text(title, m + 4, y + 5.5);
+    doc.text(sd(title), mg + 4, y + 5.5);
     y += 12;
   }
   function row(label, value) {
-    if (y > 270) { doc.addPage(); y = m; }
+    if (y > 275) { doc.addPage(); y = mg; }
     doc.setTextColor(100, 116, 139); doc.setFontSize(8); doc.setFont(undefined, 'normal');
-    doc.text(label, m + 2, y);
+    doc.text(sd(label), mg + 2, y);
     doc.setTextColor(26, 26, 46); doc.setFontSize(9); doc.setFont(undefined, 'bold');
-    doc.text(String(value || '—'), m + 55, y);
+    doc.text(sd(String(value || '—')), mg + 58, y);
     y += 6;
   }
 
   const name = getAmlDisplayName(r);
   const st = AML_STATUS_MAP[r.status] || AML_STATUS_MAP.pending;
   const risk = AML_RISK_MAP[r.riskCategory] || AML_RISK_MAP.low;
-  const ddLabels = { simplified: 'Zjednodustena', basic: 'Zakladna', enhanced: 'Zvysena' };
-  const pepLabels = { no: 'Nie', yes: 'Ano - priamo', family: 'Rodinny prislusnik', associate: 'Blizka osoba' };
+  const ddLabels = { simplified: 'Zjednodušená', basic: 'Základná', enhanced: 'Zvýšená' };
+  const pepLabels = { no: 'Nie', yes: 'Áno - priamo', family: 'Rodinný príslušník', associate: 'Blízka osoba' };
 
   // Summary
-  secTitle('SUHRN');
+  secTitle('SÚHRN');
   row('Klient', name);
-  row('Typ', r.clientType === 'fo' ? 'Fyzicka osoba' : 'Pravnicka osoba');
-  row('Status', st.label);
-  row('Riziko', risk.label + ' (skore: ' + (r.riskScore || 0) + ')');
-  row('Due diligence', ddLabels[r.dueDiligenceLevel] || '');
+  row('Typ', r.clientType === 'fo' ? 'Fyzická osoba' : 'Právnická osoba');
+  row('Stav', st.label);
+  row('Riziko', risk.label + ' (skóre: ' + (r.riskScore || 0) + ')');
+  row('Stupeň starostlivosti', ddLabels[r.dueDiligenceLevel] || '');
   y += 4;
 
   // Identification
-  secTitle('IDENTIFIKACIA (§7)');
+  secTitle('IDENTIFIKÁCIA KLIENTA (§7)');
   if (r.clientType === 'fo') {
     row('Meno a priezvisko', r.firstName + ' ' + r.lastName);
-    row('Rodne cislo', r.birthNumber || '');
-    row('Datum narodenia', r.dateOfBirth || '');
-    row('Statna prislusnost', r.nationality || '');
-    row('Adresa', r.permanentAddress || '');
-    row('Doklad', (AML_DOC_LABELS[r.idDocType] || '') + ' ' + (r.idDocNumber || ''));
-    row('Platnost do', r.idDocExpiry || '');
+    row('Rodné číslo', r.birthNumber || '');
+    row('Dátum narodenia', r.dateOfBirth || '');
+    row('Štátna príslušnosť', r.nationality || '');
+    row('Trvalý pobyt', r.permanentAddress || '');
+    row('Doklad totožnosti', (AML_DOC_LABELS[r.idDocType] || '') + ' č. ' + (r.idDocNumber || ''));
+    row('Platnosť dokladu do', r.idDocExpiry || '');
+    row('Kópia dokladu vyhotovená', r.transactionIdCopy === 'ano' ? 'Áno' : 'Nie');
   } else {
-    row('Obchodne meno', r.companyName || '');
-    row('ICO', r.ico || '');
-    row('Pravna forma', r.legalForm || '');
-    row('Sidlo', r.registeredOffice || '');
-    row('Statutar', r.statutoryRepName || '');
-    row('UBO', (r.uboName || '') + (r.uboOwnershipPct ? ' (' + r.uboOwnershipPct + '%)' : ''));
+    row('Obchodné meno', r.companyName || '');
+    row('IČO', r.ico || '');
+    row('Právna forma', r.legalForm || '');
+    row('Sídlo', r.registeredOffice || '');
+    row('Štatutárny orgán', r.statutoryRepName || '');
+    row('Konečný užívateľ výhod', (r.uboName || '') + (r.uboOwnershipPct ? ' (' + r.uboOwnershipPct + '%)' : ''));
   }
   y += 4;
 
   // PEP
   secTitle('PEP STATUS (§6)');
-  row('PEP', pepLabels[r.pepStatus] || 'Nie');
-  if (r.pepDetails) row('Detaily', r.pepDetails);
+  row('Politicky exponovaná osoba', pepLabels[r.pepStatus] || 'Nie');
+  if (r.pepDetails) row('Detaily PEP', r.pepDetails);
   y += 4;
 
   // Register verification
-  secTitle('OVERENIE V REGISTROCH');
-  const sanctLabelsP = { clear: 'Bez nalezu', hit: 'NAJDENA ZHODA', review: 'Na posudenie', pending: 'Neoverene' };
-  row('Sankcne zoznamy (EU, OSN, OFAC)', sanctLabelsP[r.sanctionsResult] || 'Neoverene');
-  row('Datum overenia sankcii', r.sanctionsDate || 'Nevykonane');
-  row('Register PEP', sanctLabelsP[r.registerResult] || 'Neoverene');
-  row('Datum overenia registrov', r.registerDate || 'Nevykonane');
-  if (r.registerNote) row('Zdroj / poznamka', r.registerNote);
+  secTitle('OVERENIE V REGISTROCH A SANKČNÝCH ZOZNAMOCH');
+  const sanctLabelsP = { clear: 'Bez nálezu', hit: 'NÁJDENÁ ZHODA', review: 'Na posúdenie', pending: 'Neoverené' };
+  row('Sankčné zoznamy (EÚ, OSN, OFAC)', sanctLabelsP[r.sanctionsResult] || 'Neoverené');
+  row('Dátum overenia sankcií', r.sanctionsDate || 'Nevykonané');
+  row('Register PEP', sanctLabelsP[r.registerResult] || 'Neoverené');
+  row('Dátum overenia registrov', r.registerDate || 'Nevykonané');
+  if (r.registerNote) row('Zdroj / poznámka', r.registerNote);
   // Auto-check matches
   if (r.autoCheckData) {
     const autoMatches = [
-      ...(r.autoCheckData.sanctions?.matches || []).map(m => ({ ...m, type: 'Sankcie' })),
-      ...(r.autoCheckData.pep?.matches || []).map(m => ({ ...m, type: 'PEP' }))
+      ...(r.autoCheckData.sanctions?.matches || []).map(am => ({ ...am, type: 'Sankcie' })),
+      ...(r.autoCheckData.pep?.matches || []).map(am => ({ ...am, type: 'PEP' }))
     ];
     if (autoMatches.length > 0) {
       y += 2;
-      row('Pocet najdenych zaznamov', autoMatches.length);
-      autoMatches.slice(0, 5).forEach((m, i) => {
-        row('Zaznam ' + (i + 1), m.name + ' (' + Math.round(m.score * 100) + '% zhoda, ' + m.type + ')');
+      row('Počet nájdených záznamov', autoMatches.length);
+      autoMatches.slice(0, 5).forEach((am, i) => {
+        row('Záznam ' + (i + 1), am.name + ' (' + Math.round(am.score * 100) + '% zhoda, ' + am.type + ')');
       });
     }
-    row('Zdroj overenia', r.autoCheckData.source || 'OpenSanctions.org');
+    row('Zdroj overenia', r.autoCheckData.source || 'OFAC SDN + UN Security Council');
   }
   y += 4;
 
   // Transaction
-  secTitle('TRANSAKCIA A PROSTRIEDKY (§10)');
-  row('Ucel', AML_PURPOSE_LABELS[r.transactionPurpose] || '');
-  row('Hodnota', r.transactionValue ? Number(r.transactionValue).toLocaleString('sk-SK') + ' EUR' : '');
-  row('Povod prostriedkov', (r.sourceOfFunds || []).map(s => AML_SOURCE_LABELS[s] || s).join(', '));
-  if (r.sourceOfFundsDetail) row('Detail', r.sourceOfFundsDetail);
+  secTitle('OBCHOD / TRANSAKCIA (§10)');
+  row('Účel obchodu', AML_PURPOSE_LABELS[r.transactionPurpose] || '');
+  row('Účel nadobúdania', AML_BUY_PURPOSE_LABELS[r.transactionBuyPurpose] || '');
+  row('Hodnota obchodu', r.transactionValue ? Number(r.transactionValue).toLocaleString('sk-SK') + ' EUR' : '');
+  row('Spôsob financovania', AML_FINANCING_LABELS[r.transactionFinancing] || '');
+  row('Zastúpenie', AML_REPRESENTATION_LABELS[r.transactionRepresentation] || '');
+  row('Hotovosť nad 50 000 EUR', r.transactionCash50k === 'ano' ? 'ÁNO' : 'Nie');
+  row('Pôvod prostriedkov', (r.sourceOfFunds || []).map(s => AML_SOURCE_LABELS[s] || s).join(', '));
+  if (r.sourceOfFundsDetail) row('Detail pôvodu', r.sourceOfFundsDetail);
   y += 4;
 
   // Documents evidence
-  secTitle('PRILOZENE DOKLADY');
-  row('Doklad totoznosti (OP/pas)', r.docIdName || 'NEPRILOZENY');
-  row('Doklad o povode prostriedkov', r.docFundsName || 'NEPRILOZENY');
-  if (r.docsOtherNames && r.docsOtherNames.length) row('Dalsie doklady', r.docsOtherNames.join(', '));
+  secTitle('PRILOŽENÉ DOKLADY');
+  row('Doklad totožnosti (OP/pas)', r.docIdName || 'NEPRILOŽENÝ');
+  row('Doklad o pôvode prostriedkov', r.docFundsName || 'NEPRILOŽENÝ');
+  if (r.docsOtherNames && r.docsOtherNames.length) row('Ďalšie doklady', r.docsOtherNames.join(', '));
   y += 4;
 
   // Risk factors
   if (r.riskFactors && r.riskFactors.length) {
-    secTitle('RIZIKOVE FAKTORY');
+    secTitle('RIZIKOVÉ FAKTORY');
     r.riskFactors.forEach(f => row(f.f, '+' + f.s));
     y += 2;
-    row('CELKOVE SKORE', r.riskScore || 0);
+    row('CELKOVÉ SKÓRE', r.riskScore || 0);
+    row('KATEGÓRIA RIZIKA', risk.label);
+    row('STUPEŇ STAROSTLIVOSTI', ddLabels[r.dueDiligenceLevel] || '');
   }
 
-  // Audit
-  y += 8;
-  doc.setDrawColor(200); doc.line(m, y, pw - m, y); y += 6;
+  // Signature lines
+  y += 10;
+  if (y > 250) { doc.addPage(); y = mg; }
+  doc.setDrawColor(180);
+  doc.line(mg, y, mg + 70, y);
+  doc.line(pw - mg - 70, y, pw - mg, y);
+  y += 5;
   doc.setTextColor(100, 116, 139); doc.setFontSize(7); doc.setFont(undefined, 'normal');
-  doc.text('Vytvorene: ' + (r.createdAt ? new Date(r.createdAt).toLocaleString('sk-SK') : ''), m, y);
+  doc.text(sd('Podpis klienta'), mg, y);
+  doc.text(sd('Podpis makléra / povinnej osoby'), pw - mg - 70, y);
+  y += 3;
+  doc.text(sd('Dátum: ............................'), mg, y);
+  doc.text(sd('Dátum: ............................'), pw - mg - 70, y);
+
+  // Audit trail
+  y += 10;
+  doc.setDrawColor(200); doc.line(mg, y, pw - mg, y); y += 6;
+  doc.setTextColor(100, 116, 139); doc.setFontSize(7); doc.setFont(undefined, 'normal');
+  doc.text(sd('Vytvorené: ' + (r.createdAt ? new Date(r.createdAt).toLocaleString('sk-SK') : '')), mg, y);
   if (r.verifiedBy) {
     y += 4;
-    doc.text('Schvalil: ' + r.verifiedBy + ' | ' + new Date(r.verifiedAt).toLocaleString('sk-SK'), m, y);
+    doc.text(sd('Schválil: ' + r.verifiedBy + ' | ' + new Date(r.verifiedAt).toLocaleString('sk-SK')), mg, y);
   }
-  y += 4;
-  doc.text('Tento dokument bol vygenerovany systemom SecPro pre ucely plnenia povinnosti podla zakona 297/2008 Z.z.', m, y);
-  y += 4;
-  doc.text('Upozornenie: K tomuto zaznamu musia byt fyzicky prilozene kopie dokladov (OP, doklad o povode prostriedkov).', m, y);
+  y += 6;
+  doc.setFontSize(6.5);
+  doc.text(sd('Tento dokument bol vygenerovaný systémom SecPro pre účely plnenia povinností podľa zákona č. 297/2008 Z.z.'), mg, y);
+  y += 3.5;
+  doc.text(sd('o ochrane pred legalizáciou príjmov z trestnej činnosti a o ochrane pred financovaním terorizmu.'), mg, y);
+  y += 3.5;
+  doc.text(sd('Upozornenie: K tomuto záznamu musia byť fyzicky priložené kópie dokladov (OP, doklad o pôvode prostriedkov).'), mg, y);
 
-  doc.save('AML-' + name.replace(/\s+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.pdf');
+  doc.save('AML-' + sd(name).replace(/\s+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ==================== DASHBOARD ====================
