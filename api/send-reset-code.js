@@ -13,7 +13,8 @@ module.exports = async (req, res) => {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const RESET_SECRET = process.env.RESET_SECRET;
   if (!RESEND_API_KEY || !RESET_SECRET) {
-    return res.status(500).json({ error: 'Server not configured' });
+    console.error('Missing env vars:', { hasResendKey: !!RESEND_API_KEY, hasResetSecret: !!RESET_SECRET });
+    return res.status(500).json({ error: 'Server not configured', detail: 'Missing: ' + (!RESEND_API_KEY ? 'RESEND_API_KEY ' : '') + (!RESET_SECRET ? 'RESET_SECRET' : '') });
   }
 
   // Generate 6-digit code
@@ -54,11 +55,13 @@ module.exports = async (req, res) => {
 
     if (!emailRes.ok) {
       const err = await emailRes.json();
-      return res.status(500).json({ error: 'Failed to send email', detail: err.message });
+      console.error('Resend API error:', JSON.stringify(err));
+      return res.status(500).json({ error: 'Failed to send email', detail: err.message || JSON.stringify(err) });
     }
 
     return res.status(200).json({ token });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to send email' });
+    console.error('Send email exception:', err.message, err.stack);
+    return res.status(500).json({ error: 'Failed to send email', detail: err.message });
   }
 };

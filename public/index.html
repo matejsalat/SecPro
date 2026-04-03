@@ -8536,11 +8536,15 @@ const INACTIVE_STATUSES = ['predana', 'stiahnuta'];
 
 async function syncToLeonis(prop) {
   try {
-    await fetch('/api/sync-listing', {
+    const res = await fetch('/api/sync-listing', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(prop),
     });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.warn('[SecPro] LEONIS sync HTTP', res.status, text);
+    }
   } catch (e) {
     console.warn('[SecPro] LEONIS sync failed:', e.message);
   }
@@ -10119,6 +10123,9 @@ function saveProperty() {
     prop.createdAt = new Date().toISOString();
     props.unshift(prop);
   }
+  // Keep original photos for LEONIS sync (localStorage save may strip them)
+  const photosForSync = [...photos];
+
   try {
     saveProperties(props);
   } catch (e) {
@@ -10137,9 +10144,12 @@ function saveProperty() {
   }
   closePropertyForm();
   renderProperties();
-  // Sync to LEONIS
-  if (prop.status === ACTIVE_LISTING_STATUS) syncToLeonis(prop);
-  else if (INACTIVE_STATUSES.includes(prop.status)) removeFromLeonis(prop.id);
+  // Sync to LEONIS (always include original photos, even if stripped from localStorage)
+  if (prop.status === ACTIVE_LISTING_STATUS) {
+    syncToLeonis({ ...prop, photos: photosForSync });
+  } else if (INACTIVE_STATUSES.includes(prop.status)) {
+    removeFromLeonis(prop.id);
+  }
 }
 
 function deleteProperty(id) {
@@ -10173,9 +10183,13 @@ function changePropertyStatus(id, newStatus) {
   p.updatedAt = new Date().toISOString();
   saveProperties(props);
   renderProperties();
-  // Sync to LEONIS
-  if (newStatus === ACTIVE_LISTING_STATUS) syncToLeonis(p);
-  else if (INACTIVE_STATUSES.includes(newStatus)) removeFromLeonis(p.id);
+  // Sync to LEONIS (omit photos — they were uploaded during initial save)
+  if (newStatus === ACTIVE_LISTING_STATUS) {
+    const { photos, ...withoutPhotos } = p;
+    syncToLeonis(withoutPhotos);
+  } else if (INACTIVE_STATUSES.includes(newStatus)) {
+    removeFromLeonis(p.id);
+  }
 }
 
 function advanceProperty(id, forceTo) {
@@ -11418,7 +11432,7 @@ async function handleForgotSendCode(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showLoginError(data.error || 'Nepodarilo sa odoslať kód.');
+      showLoginError((data.error || 'Nepodarilo sa odoslať kód.') + (data.detail ? ' (' + data.detail + ')' : ''));
       btn.textContent = 'Odoslať kód';
       btn.disabled = false;
       return;
