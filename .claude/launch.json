@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "secpro-server",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/usr/local/bin/node",
       "runtimeArgs": ["server.js"],
       "port": 3000,
       "autoPort": true

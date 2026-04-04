@@ -794,6 +794,38 @@
     .pca-cancel:hover { background: #F1F5F9; color: #DC2626; }
     .pca-delete { color: #D1D5DB; }
     .pca-delete:hover { background: #FEF2F2; color: #DC2626; }
+    /* LEONES publish button */
+    .pca-leones {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.2s;
+    }
+    .pca-leones.publish {
+      color: #B8860B;
+      background: #FFF8E7;
+      border-color: rgba(184,134,11,0.25);
+    }
+    .pca-leones.publish:hover {
+      background: #FFEEBA;
+      border-color: rgba(184,134,11,0.5);
+    }
+    .pca-leones.published {
+      color: #16A34A;
+      background: #F0FDF4;
+      border-color: rgba(22,163,74,0.25);
+    }
+    .pca-leones.published:hover {
+      background: #FEF2F2;
+      color: #DC2626;
+      border-color: rgba(220,38,38,0.25);
+    }
 
     /* ===== PHOTO LIGHTBOX ===== */
     .lightbox-overlay {
@@ -4301,6 +4333,13 @@
             <div class="ai-toggle-row">
               <span>Pridať výzvu na kontakt / obhliadku</span>
               <label class="ai-toggle"><input type="checkbox" id="ai-opt-cta" checked /><span class="ai-toggle-slider"></span></label>
+            </div>
+            <div class="ai-toggle-row" style="border-top:2px solid var(--border);padding-top:0.75rem;margin-top:0.25rem;">
+              <div>
+                <span>Použiť fotky pri generovaní</span>
+                <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.15rem;">AI uvidí fotky nehnuteľnosti a opíše interiér, stav, výhľad...</div>
+              </div>
+              <label class="ai-toggle"><input type="checkbox" id="ai-opt-photos" checked /><span class="ai-toggle-slider"></span></label>
             </div>
           </div>
 
@@ -8561,6 +8600,35 @@ async function removeFromLeonis(id) {
     console.warn('[SecPro] LEONIS removal failed:', e.message);
   }
 }
+
+// ─── Manual LEONIS publish / unpublish ────────────────────────────────────
+async function publishToLeonis(id) {
+  const props = getProperties();
+  const p = props.find(x => x.id === id);
+  if (!p) return;
+
+  // Collect photos from the stored property (may be data-URLs or empty)
+  const photosToSend = (p.photos && p.photos.length > 0) ? [...p.photos] : [];
+
+  p.leonisPublished = true;
+  p.leonisPublishedAt = new Date().toISOString();
+  saveProperties(props);
+  renderProperties();
+
+  await syncToLeonis({ ...p, photos: photosToSend });
+}
+
+async function unpublishFromLeonis(id) {
+  const props = getProperties();
+  const p = props.find(x => x.id === id);
+  if (!p) return;
+
+  p.leonisPublished = false;
+  saveProperties(props);
+  renderProperties();
+
+  await removeFromLeonis(id);
+}
 // ──────────────────────────────────────────────────────────────────────────
 
 function getProperties() {
@@ -10144,11 +10212,10 @@ function saveProperty() {
   }
   closePropertyForm();
   renderProperties();
-  // Sync to LEONIS (always include original photos, even if stripped from localStorage)
-  if (prop.status === ACTIVE_LISTING_STATUS) {
-    syncToLeonis({ ...prop, photos: photosForSync });
-  } else if (INACTIVE_STATUSES.includes(prop.status)) {
-    removeFromLeonis(prop.id);
+  // If already published on LEONES, re-sync updated data (without replacing photos)
+  if (prop.leonisPublished) {
+    const { photos: _, ...withoutPhotos } = prop;
+    syncToLeonis(withoutPhotos);
   }
 }
 
@@ -10183,11 +10250,11 @@ function changePropertyStatus(id, newStatus) {
   p.updatedAt = new Date().toISOString();
   saveProperties(props);
   renderProperties();
-  // Sync to LEONIS (omit photos — they were uploaded during initial save)
-  if (newStatus === ACTIVE_LISTING_STATUS) {
-    const { photos, ...withoutPhotos } = p;
-    syncToLeonis(withoutPhotos);
-  } else if (INACTIVE_STATUSES.includes(newStatus)) {
+  // Auto-unpublish from LEONES when property is sold or withdrawn
+  if (INACTIVE_STATUSES.includes(newStatus) && p.leonisPublished) {
+    p.leonisPublished = false;
+    saveProperties(props);
+    renderProperties();
     removeFromLeonis(p.id);
   }
 }
@@ -10337,6 +10404,20 @@ function renderProperties() {
           ${viewCount ? `<span class="prop-card-badge badge-viewings" onclick="openQuickInterestModal('${p.id}')">📋 ${viewCount}</span>` : ''}
           <span class="prop-card-badge" style="background:#F0F9F7;color:#1A7A8A;border:1px dashed rgba(26,122,138,0.3);" onclick="openQuickInterestModal('${p.id}')">+ Záujemca</span>
         </div>
+      </div>
+
+      <!-- LEONES publish -->
+      <div style="padding:0 16px 8px;">
+        ${p.leonisPublished
+          ? `<button onclick="event.stopPropagation();unpublishFromLeonis('${p.id}')" class="pca-leones published" title="Stiahnuť z LEONES">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Na LEONES
+            </button>`
+          : `<button onclick="event.stopPropagation();publishToLeonis('${p.id}')" class="pca-leones publish" title="Publikovať na LEONES">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Publikovať na LEONES
+            </button>`
+        }
       </div>
 
       <!-- Footer actions -->
@@ -10740,6 +10821,7 @@ function renderAiSettingsPage() {
   document.getElementById('ai-opt-emoji').checked = settings.emoji === true;
   document.getElementById('ai-opt-okolie').checked = settings.okolie !== false;
   document.getElementById('ai-opt-cta').checked = settings.cta !== false;
+  document.getElementById('ai-opt-photos').checked = settings.usePhotos !== false;
 
   // Custom instructions
   document.getElementById('ai-custom-instructions').value = settings.customInstructions || '';
@@ -10821,11 +10903,12 @@ function saveAiSettingsPage() {
   const emoji = document.getElementById('ai-opt-emoji').checked;
   const okolie = document.getElementById('ai-opt-okolie').checked;
   const cta = document.getElementById('ai-opt-cta').checked;
+  const usePhotos = document.getElementById('ai-opt-photos').checked;
 
   // Custom instructions
   const customInstructions = document.getElementById('ai-custom-instructions').value.trim();
 
-  saveAiSettingsData({ provider, apiKey, model, tones, length, style, formal, emoji, okolie, cta, customInstructions });
+  saveAiSettingsData({ provider, apiKey, model, tones, length, style, formal, emoji, okolie, cta, usePhotos, customInstructions });
 
   const statusEl = document.getElementById('ai-page-save-status');
   statusEl.textContent = '✓ Nastavenia uložené';
@@ -10979,6 +11062,17 @@ function getPropertyFormData() {
   };
 }
 
+// Grab compressed images from property photo preview (max 5)
+function getPropertyPhotosBase64(max) {
+  const imgs = document.querySelectorAll('#prop-photo-preview img');
+  const result = [];
+  for (let i = 0; i < Math.min(imgs.length, max || 5); i++) {
+    const src = imgs[i].src;
+    if (src && src.startsWith('data:image/')) result.push(src);
+  }
+  return result;
+}
+
 // AI Generate Description
 async function aiGenerateDescription() {
   const settings = getAiSettings();
@@ -11002,6 +11096,7 @@ async function aiGenerateDescription() {
 
   try {
     const sampleAds = getSampleAds();
+    const images = (settings.usePhotos !== false) ? getPropertyPhotosBase64(5) : [];
     const resp = await fetch('/api/ai-generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -11011,6 +11106,7 @@ async function aiGenerateDescription() {
         model: settings.model || 'claude-sonnet-4-6',
         property,
         sampleAds: sampleAds.length > 0 ? sampleAds : null,
+        images: images.length > 0 ? images : null,
         mode: 'description',
         tone: settings.tones || ['profesionalny'],
         length: settings.length || 'stredny',
@@ -11053,6 +11149,7 @@ async function aiGenerateHeadline() {
 
   try {
     const sampleAds = getSampleAds();
+    const images = (settings.usePhotos !== false) ? getPropertyPhotosBase64(3) : [];
     const resp = await fetch('/api/ai-generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -11062,6 +11159,7 @@ async function aiGenerateHeadline() {
         model: settings.model || 'claude-sonnet-4-6',
         property,
         sampleAds: sampleAds.length > 0 ? sampleAds : null,
+        images: images.length > 0 ? images : null,
         mode: 'headline',
         tone: settings.tones || ['profesionalny'],
         formal: settings.formal !== false,

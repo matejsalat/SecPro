@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { provider, apiKey, model, property, sampleAds, mode, tone, length, style, formal, emoji, okolie, cta, customInstructions } = req.body;
+    const { provider, apiKey, model, property, sampleAds, images, mode, tone, length, style, formal, emoji, okolie, cta, customInstructions } = req.body;
 
     if (!apiKey) return res.status(400).json({ error: 'API kľúč je povinný' });
     if (!property) return res.status(400).json({ error: 'Údaje o nehnuteľnosti sú povinné' });
@@ -61,13 +61,16 @@ module.exports = async function handler(req, res) {
 
     const settingsBlock = toneStr + lengthStr + styleStr + formalStr + emojiStr + okolieStr + ctaStr + customStr;
 
+    const hasImages = images && images.length > 0;
+    const imageInstr = hasImages ? '\nK nehnuteľnosti sú priložené fotografie. Na základe toho čo vidíš, opíš interiér, stav, zariadenie, výhľad, svetlo a atmosféru. Zapracuj vizuálne detaily priamo do textu popisu.' : '';
+
     let systemPrompt, userPrompt;
 
     if (mode === 'headline') {
-      systemPrompt = `Si expert na tvorbu titulkov realitných inzerátov na Slovensku. Tvor krátke, chytľavé titulky v slovenčine. Vráť LEN titulok, nič iné.${toneStr}${formalStr}${emojiStr}${customStr}${sampleContext}`;
+      systemPrompt = `Si expert na tvorbu titulkov realitných inzerátov na Slovensku. Tvor krátke, chytľavé titulky v slovenčine. Vráť LEN titulok, nič iné.${toneStr}${formalStr}${emojiStr}${hasImages ? '\nInšpiruj sa priloženými fotkami pri tvorbe titulku.' : ''}${customStr}${sampleContext}`;
       userPrompt = `Vytvor chytľavý titulok inzerátu pre túto nehnuteľnosť:\n\n${detailsStr}`;
     } else {
-      systemPrompt = `Si expert na tvorbu realitných inzerátov na Slovensku. Píš popisy nehnuteľností v slovenčine. Popis by mal byť atraktívny a mal by zdôrazniť výhody nehnuteľnosti. Nepoužívaj klamlivé tvrdenia. Vráť LEN text popisu, bez titulku a bez úvodzoviek.${settingsBlock}${sampleContext}`;
+      systemPrompt = `Si expert na tvorbu realitných inzerátov na Slovensku. Píš popisy nehnuteľností v slovenčine. Popis by mal byť atraktívny a mal by zdôrazniť výhody nehnuteľnosti. Nepoužívaj klamlivé tvrdenia. Vráť LEN text popisu, bez titulku a bez úvodzoviek.${imageInstr}${settingsBlock}${sampleContext}`;
       const paragraphs = lengthMap[length] || '3-5 odstavcov';
       let structure = `Popis by mal mať ${paragraphs} a mal by zahŕňať:\n- Úvodné zhrnutie`;
       structure += '\n- Popis dispozície a vybavenia';
@@ -76,25 +79,31 @@ module.exports = async function handler(req, res) {
       userPrompt = `Napíš popis inzerátu pre túto nehnuteľnosť:\n\n${detailsStr}\n\n${structure}`;
     }
 
+    // Parse images: extract base64 data and media type from data URLs
+    const parsedImages = hasImages ? images.map(dataUrl => {
+      const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+      return match ? { mediaType: match[1], data: match[2] } : null;
+    }).filter(Boolean).slice(0, 5) : [];
+
     const maxTokens = mode === 'headline' ? 100 : 1024;
 
     // Route to provider
     let result;
     switch (selectedProvider) {
       case 'anthropic':
-        result = await callAnthropic(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        result = await callAnthropic(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens, parsedImages);
         break;
       case 'openai':
-        result = await callOpenAI(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        result = await callOpenAI(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens, parsedImages);
         break;
       case 'google':
-        result = await callGoogle(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        result = await callGoogle(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens, parsedImages);
         break;
       case 'groq':
-        result = await callGroq(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        result = await callGroq(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens, parsedImages);
         break;
       case 'openrouter':
-        result = await callOpenRouter(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens);
+        result = await callOpenRouter(apiKey, selectedModel, systemPrompt, userPrompt, maxTokens, parsedImages);
         break;
       default:
         return res.status(400).json({ error: `Neznámy poskytovateľ: ${selectedProvider}` });
@@ -113,7 +122,18 @@ module.exports = async function handler(req, res) {
 };
 
 // ── Anthropic (Claude) ──
-async function callAnthropic(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+async function callAnthropic(apiKey, model, systemPrompt, userPrompt, maxTokens, images) {
+  // Build multimodal content array if images provided
+  let userContent;
+  if (images && images.length > 0) {
+    userContent = [
+      ...images.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } })),
+      { type: 'text', text: userPrompt },
+    ];
+  } else {
+    userContent = userPrompt;
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -125,7 +145,7 @@ async function callAnthropic(apiKey, model, systemPrompt, userPrompt, maxTokens)
       model,
       max_tokens: maxTokens,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+      messages: [{ role: 'user', content: userContent }],
     }),
   });
 
@@ -139,7 +159,18 @@ async function callAnthropic(apiKey, model, systemPrompt, userPrompt, maxTokens)
 }
 
 // ── OpenAI (GPT) ──
-async function callOpenAI(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+async function callOpenAI(apiKey, model, systemPrompt, userPrompt, maxTokens, images) {
+  // Build multimodal content array if images provided
+  let userContent;
+  if (images && images.length > 0) {
+    userContent = [
+      ...images.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mediaType};base64,${img.data}` } })),
+      { type: 'text', text: userPrompt },
+    ];
+  } else {
+    userContent = userPrompt;
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -151,7 +182,7 @@ async function callOpenAI(apiKey, model, systemPrompt, userPrompt, maxTokens) {
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: userContent },
       ],
     }),
   });
@@ -166,14 +197,23 @@ async function callOpenAI(apiKey, model, systemPrompt, userPrompt, maxTokens) {
 }
 
 // ── Google (Gemini) ──
-async function callGoogle(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+async function callGoogle(apiKey, model, systemPrompt, userPrompt, maxTokens, images) {
+  // Build multimodal parts array if images provided
+  const parts = [];
+  if (images && images.length > 0) {
+    images.forEach(img => {
+      parts.push({ inline_data: { mime_type: img.mediaType, data: img.data } });
+    });
+  }
+  parts.push({ text: userPrompt });
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      contents: [{ role: 'user', parts }],
       generationConfig: { maxOutputTokens: maxTokens },
     }),
   });
@@ -189,7 +229,18 @@ async function callGoogle(apiKey, model, systemPrompt, userPrompt, maxTokens) {
 }
 
 // ── Groq ──
-async function callGroq(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+async function callGroq(apiKey, model, systemPrompt, userPrompt, maxTokens, images) {
+  // Groq supports OpenAI-compatible vision format
+  let userContent;
+  if (images && images.length > 0) {
+    userContent = [
+      ...images.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mediaType};base64,${img.data}` } })),
+      { type: 'text', text: userPrompt },
+    ];
+  } else {
+    userContent = userPrompt;
+  }
+
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -201,7 +252,7 @@ async function callGroq(apiKey, model, systemPrompt, userPrompt, maxTokens) {
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: userContent },
       ],
     }),
   });
@@ -216,7 +267,18 @@ async function callGroq(apiKey, model, systemPrompt, userPrompt, maxTokens) {
 }
 
 // ── OpenRouter ──
-async function callOpenRouter(apiKey, model, systemPrompt, userPrompt, maxTokens) {
+async function callOpenRouter(apiKey, model, systemPrompt, userPrompt, maxTokens, images) {
+  // OpenRouter supports OpenAI-compatible vision format
+  let userContent;
+  if (images && images.length > 0) {
+    userContent = [
+      ...images.map(img => ({ type: 'image_url', image_url: { url: `data:${img.mediaType};base64,${img.data}` } })),
+      { type: 'text', text: userPrompt },
+    ];
+  } else {
+    userContent = userPrompt;
+  }
+
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -228,7 +290,7 @@ async function callOpenRouter(apiKey, model, systemPrompt, userPrompt, maxTokens
       max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: userContent },
       ],
     }),
   });
