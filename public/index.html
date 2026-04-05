@@ -9504,7 +9504,7 @@ function openNaborModal(propId) {
     if (p.ownerEmail) document.getElementById('nb-email-vlastnik').value = p.ownerEmail;
     if (p.price) document.getElementById('nb-cena-inzercia-byt').value = p.price + ' €';
     document.getElementById('nb-datum-byt').value = new Date().toISOString().split('T')[0];
-    const session = getSession();
+    const session = getStoredUser();
     if (session) document.getElementById('nb-makler-byt').value = session.name;
   } else {
     if (p.address) document.getElementById('nd-adresa').value = (p.address || '') + (p.city ? ', ' + p.city : '');
@@ -9513,7 +9513,7 @@ function openNaborModal(propId) {
     if (p.ownerName) document.getElementById('nd-vlastnik1').value = p.ownerName;
     if (p.price) document.getElementById('nd-cena-inzercia').value = p.price + ' €';
     document.getElementById('nd-datum').value = new Date().toISOString().split('T')[0];
-    const session = getSession();
+    const session = getStoredUser();
     if (session) document.getElementById('nd-makler').value = session.name;
   }
 
@@ -9942,7 +9942,7 @@ function openProtocolModal(propId) {
   document.getElementById('proto-viewing-detail').style.display = 'none';
 
   // Pre-fill broker name from session
-  const session = getSession();
+  const session = getStoredUser();
   document.getElementById('proto-broker-name').value = session ? session.name : '';
   document.getElementById('proto-client-name').value = '';
   document.getElementById('proto-notes').value = '';
@@ -11551,40 +11551,59 @@ function exportContactsCSV() {
 // Init contacts on page load
 document.addEventListener('DOMContentLoaded', () => { renderContacts(); });
 
-// ===== AUTH SYSTEM =====
-const AUTH_USERS_KEY = 'secpro_users';
-const AUTH_SESSION_KEY = 'secpro_session';
+// ===== AUTH SYSTEM (Server-side with Upstash Redis) =====
+const AUTH_TOKEN_KEY = 'secpro_auth_token';
+const AUTH_USER_KEY = 'secpro_auth_user';
 
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(AUTH_USERS_KEY) || '[]'); }
-  catch { return []; }
+function getStoredToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || null;
 }
-function saveUsers(users) { localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users)); }
-function getSession() {
+function getStoredUser() {
   try {
-    return JSON.parse(localStorage.getItem(AUTH_SESSION_KEY))
-      || JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY));
+    return JSON.parse(localStorage.getItem(AUTH_USER_KEY))
+      || JSON.parse(sessionStorage.getItem(AUTH_USER_KEY));
   } catch { return null; }
 }
-function saveSession(user, remember) {
+function saveAuthLocal(token, user, remember) {
   if (remember) {
-    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   } else {
-    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   }
 }
 function clearSession() {
-  localStorage.removeItem(AUTH_SESSION_KEY);
-  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_USER_KEY);
+  // Also clean up legacy keys
+  localStorage.removeItem('secpro_session');
+  sessionStorage.removeItem('secpro_session');
 }
 
-// Simple hash (not cryptographic - for localStorage demo only)
-async function simpleHash(str) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// Validate session token against server
+async function validateSession() {
+  const token = getStoredToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch('/api/auth-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      clearSession();
+      return null;
+    }
+    const data = await res.json();
+    return data.user || null;
+  } catch {
+    // Offline fallback — trust local cache
+    return getStoredUser();
+  }
 }
 
 function switchLoginTab(tab) {
@@ -11627,39 +11646,63 @@ async function handleRegister(e) {
   const pass2 = document.getElementById('regPassword2').value;
 
   if (pass !== pass2) { showLoginError('Heslá sa nezhodujú.'); return; }
+  if (pass.length < 6) { showLoginError('Heslo musí mať aspoň 6 znakov.'); return; }
 
-  const users = getUsers();
-  if (users.find(u => u.email === email)) {
-    showLoginError('Účet s týmto e-mailom už existuje.');
-    return;
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrujem...'; }
+
+  try {
+    const res = await fetch('/api/auth-register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password: pass }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showLoginError(data.error || 'Registrácia zlyhala.');
+      return;
+    }
+
+    document.getElementById('registerForm').reset();
+    showLoginSuccess('Účet vytvorený! Teraz sa môžete prihlásiť.');
+    setTimeout(() => switchLoginTab('login'), 1500);
+  } catch (err) {
+    showLoginError('Chyba pripojenia k serveru.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Registrovať sa'; }
   }
-
-  const hashedPass = await simpleHash(pass);
-  users.push({ name, email, password: hashedPass, createdAt: new Date().toISOString() });
-  saveUsers(users);
-
-  document.getElementById('registerForm').reset();
-  showLoginSuccess('Účet vytvorený! Teraz sa môžete prihlásiť.');
-  setTimeout(() => switchLoginTab('login'), 1500);
 }
 
 async function handleLogin(e) {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const pass = document.getElementById('loginPassword').value;
-  const hashedPass = await simpleHash(pass);
-
-  const users = getUsers();
-  const user = users.find(u => u.email === email && u.password === hashedPass);
-
-  if (!user) {
-    showLoginError('Nesprávny e-mail alebo heslo.');
-    return;
-  }
-
   const remember = document.getElementById('rememberMe').checked;
-  saveSession({ name: user.name, email: user.email }, remember);
-  enterApp(user);
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Prihlasujem...'; }
+
+  try {
+    const res = await fetch('/api/auth-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, remember }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showLoginError(data.error || 'Prihlásenie zlyhalo.');
+      return;
+    }
+
+    saveAuthLocal(data.token, data.user, remember);
+    enterApp(data.user);
+  } catch (err) {
+    showLoginError('Chyba pripojenia k serveru.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Prihlásiť sa'; }
+  }
 }
 
 let resetToken = null;
@@ -11706,13 +11749,14 @@ async function handleForgotVerify(e) {
   const pass2 = document.getElementById('forgotPassword2').value;
 
   if (pass !== pass2) { showLoginError('Heslá sa nezhodujú.'); return; }
+  if (pass.length < 6) { showLoginError('Heslo musí mať aspoň 6 znakov.'); return; }
   if (!resetToken) { showLoginError('Najprv si vyžiadajte kód.'); return; }
 
   try {
     const res = await fetch('/api/verify-reset-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: resetToken, code }),
+      body: JSON.stringify({ token: resetToken, code, newPassword: pass }),
     });
     const data = await res.json();
 
@@ -11720,20 +11764,6 @@ async function handleForgotVerify(e) {
       showLoginError(data.error || 'Overenie zlyhalo.');
       return;
     }
-
-    // Code verified — update or create account in localStorage
-    const users = getUsers();
-    const user = users.find(u => u.email === resetEmail);
-    const hashedPass = await simpleHash(pass);
-
-    if (user) {
-      user.password = hashedPass;
-    } else {
-      // Email verified but no local account — create one
-      const name = resetEmail.split('@')[0];
-      users.push({ name, email: resetEmail, password: hashedPass, createdAt: new Date().toISOString() });
-    }
-    saveUsers(users);
 
     resetToken = null;
     resetEmail = null;
@@ -11746,6 +11776,15 @@ async function handleForgotVerify(e) {
 }
 
 function handleLogout() {
+  const token = getStoredToken();
+  // Invalidate server session (fire-and-forget)
+  if (token) {
+    fetch('/api/auth-logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).catch(() => {});
+  }
   clearSession();
   document.getElementById('loginOverlay').classList.remove('hidden');
   document.getElementById('loginForm').reset();
@@ -13203,10 +13242,21 @@ function renderDashRecentContacts(contacts) {
 }
 
 // Check session on page load
-(function checkAuth() {
-  const session = getSession();
-  if (session && session.name) {
-    enterApp(session);
+(async function checkAuth() {
+  // Immediately show cached user for fast UX
+  const cachedUser = getStoredUser();
+  if (cachedUser && cachedUser.name) {
+    enterApp(cachedUser);
+  }
+  // Then validate against server in background
+  const token = getStoredToken();
+  if (token) {
+    const validUser = await validateSession();
+    if (!validUser) {
+      // Session expired or invalid — force re-login
+      clearSession();
+      document.getElementById('loginOverlay').classList.remove('hidden');
+    }
   }
   // Render dashboard on initial load
   renderDashboard();
