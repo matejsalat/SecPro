@@ -13,16 +13,21 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Server nie je nakonfigurovaný (KV)' });
   }
 
-  const { action } = req.body;
+  const { action } = req.body || {};
 
-  switch (action) {
-    case 'register': return handleRegister(req, res, KV_URL, KV_TOKEN);
-    case 'login':    return handleLogin(req, res, KV_URL, KV_TOKEN);
-    case 'session':  return handleSession(req, res, KV_URL, KV_TOKEN);
-    case 'logout':   return handleLogout(req, res, KV_URL, KV_TOKEN);
-    case 'seed':     return handleSeed(req, res, KV_URL, KV_TOKEN);
-    default:
-      return res.status(400).json({ error: 'Neznáma akcia: ' + action });
+  try {
+    switch (action) {
+      case 'register': return await handleRegister(req, res, KV_URL, KV_TOKEN);
+      case 'login':    return await handleLogin(req, res, KV_URL, KV_TOKEN);
+      case 'session':  return await handleSession(req, res, KV_URL, KV_TOKEN);
+      case 'logout':   return await handleLogout(req, res, KV_URL, KV_TOKEN);
+      case 'seed':     return await handleSeed(req, res, KV_URL, KV_TOKEN);
+      default:
+        return res.status(400).json({ error: 'Neznáma akcia: ' + action });
+    }
+  } catch (err) {
+    console.error('auth top-level error:', action, err.message, err.stack);
+    return res.status(500).json({ error: 'Interná chyba servera.', detail: err.message });
   }
 };
 
@@ -33,7 +38,12 @@ async function kvGet(KV_URL, KV_TOKEN, key) {
   });
   const d = await r.json();
   if (!d.result) return null;
-  return typeof d.result === 'string' ? JSON.parse(d.result) : d.result;
+  try {
+    return typeof d.result === 'string' ? JSON.parse(d.result) : d.result;
+  } catch (e) {
+    console.error('kvGet parse error for key', key, ':', typeof d.result, String(d.result).slice(0, 200));
+    throw e;
+  }
 }
 
 // ── Helper: Redis SET ──
