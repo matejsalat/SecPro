@@ -77,7 +77,10 @@ async function handleRegister(req, res, KV_URL, KV_TOKEN) {
   try {
     const existing = await kvGet(KV_URL, KV_TOKEN, userKey);
     if (existing) {
-      return res.status(409).json({ error: 'Účet s týmto e-mailom už existuje.' });
+      // If overwrite flag is set, allow re-registration (password reset fallback)
+      if (!req.body.overwrite) {
+        return res.status(409).json({ error: 'Účet s týmto e-mailom už existuje.' });
+      }
     }
 
     const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
