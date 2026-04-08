@@ -22,15 +22,10 @@ const SCRAPERS = {
   'bytsk': bytsk,
 };
 
-module.exports = async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const { handleCors } = require('../lib/kv');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+module.exports = async function handler(req, res) {
+  if (handleCors(req, res, 'GET, OPTIONS')) return;
 
   const { location, priceMin, priceMax, type, sources, page, noAgency } = req.query;
 

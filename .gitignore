@@ -3,3 +3,11 @@ node_modules/
 .claude/settings.local.json
 .env
 .superpowers/
+
+# Data files & utilities
+*.xlsx
+*.xlsm
+read_*.js
+
+# Backups
+*.local_backup

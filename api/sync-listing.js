@@ -6,14 +6,10 @@
  * DELETE → forwards { id } to LEONIS ingest (unpublish)
  */
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+const { handleCors } = require('../lib/kv');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+module.exports = async function handler(req, res) {
+  if (handleCors(req, res, 'POST, DELETE, OPTIONS')) return;
 
   const leonisUrl = process.env.LEONIS_INGEST_URL;
   const secret = process.env.SECPRO_INGEST_SECRET;
@@ -21,10 +17,6 @@ module.exports = async function handler(req, res) {
   if (!leonisUrl || !secret) {
     console.error('[sync-listing] Missing LEONIS_INGEST_URL or SECPRO_INGEST_SECRET');
     return res.status(500).json({ error: 'Server misconfiguration' });
-  }
-
-  if (req.method !== 'POST' && req.method !== 'DELETE') {
-    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {

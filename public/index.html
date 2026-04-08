@@ -13623,6 +13623,15 @@ function saveLead(lead) {
   const leads = getSavedLeads();
   if (leads.some(l => l.url === lead.url)) return;
   const score = computeLeadScore(lead);
+  const meta = (getLeadStatuses() || {})[lead.url];
+  const searchToPipeline = {
+    na_spracovanie: 'novy',
+    prevzaty: 'kontaktovany',
+    nedovolany: 'kontaktovany',
+    nechce_rk: 'strateny',
+    predane: 'strateny',
+  };
+  const mappedStatus = (meta && meta.status && searchToPipeline[meta.status]) || 'novy';
   leads.push({
     id: crypto.randomUUID(),
     title: lead.title || '',
@@ -13633,9 +13642,9 @@ function saveLead(lead) {
     source: lead.source || '',
     url: lead.url || '',
     phone: lead.phone || '',
-    status: 'novy',
+    status: mappedStatus,
     score,
-    notes: '',
+    notes: (meta && meta.notes) || '',
     savedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     contactedAt: null,

@@ -1,13 +1,8 @@
 const { fetchPage, extractPhones, stripTags } = require('../lib/scrapers/utils');
+const { handleCors } = require('../lib/kv');
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (handleCors(req, res, 'GET, OPTIONS')) return;
 
   const { url } = req.query;
 

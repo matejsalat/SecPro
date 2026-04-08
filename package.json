@@ -13,7 +13,6 @@
   "dependencies": {
     "docxtemplater": "^3.68.3",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "node-html-parser": "^7.1.0",
@@ -21,6 +20,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "express": "^5.2.1",
     "serve": "^14.2.6"
   }
 }

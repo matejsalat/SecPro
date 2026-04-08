@@ -1,10 +1,10 @@
 // Fetch customer leads from LEONES
 // GET /api/fetch-leads
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const { handleCors } = require('../lib/kv');
+
+module.exports = async function handler(req, res) {
+  if (handleCors(req, res, 'GET, OPTIONS')) return;
 
   const leonisUrl = process.env.LEONIS_INGEST_URL;
   const secret = process.env.SECPRO_INGEST_SECRET;

@@ -6,7 +6,7 @@ const COLLECTIONS = [
 ];
 
 module.exports = async (req, res) => {
-  if (handleCors(req, res)) return;
+  if (handleCors(req, res, 'POST, OPTIONS')) return;
 
   const { KV_URL, KV_TOKEN, ok } = getKV();
   if (!ok) return res.status(500).json({ error: 'Server nie je nakonfigurovaný (KV)' });
