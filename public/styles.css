@@ -3965,15 +3965,16 @@
 
 /* Drop zone */
 .pm-dropzone {
+  display: block;
   position: relative;
   border: 2px dashed #CBD5E1;
   border-radius: 14px;
-  padding: 1.5rem 1rem;
+  padding: 1.75rem 1rem;
   background: #FAFBFC;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  margin-bottom: 0.85rem;
+  margin-bottom: 1rem;
 }
 .pm-dropzone:hover {
   border-color: var(--primary-lighter);
@@ -4010,20 +4011,37 @@
 /* Counter header */
 .pm-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   padding: 0 0.1rem;
 }
 .pm-count {
-  font-size: 0.78rem;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--primary-bg);
+  border: 1px solid var(--primary-lighter);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--primary);
+  white-space: nowrap;
 }
-.pm-count.limit { color: var(--danger); }
+.pm-count.limit {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  color: var(--danger);
+}
 .pm-hint {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-light);
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
 }
 
 /* Photo grid */
@@ -4152,15 +4170,6 @@
   color: var(--danger);
 }
 .pm-action-btn svg { width: 14px; height: 14px; stroke-width: 2; }
-
-/* Empty state */
-.pm-empty {
-  padding: 1.75rem 1rem;
-  text-align: center;
-  color: var(--text-light);
-  font-size: 0.85rem;
-}
-.pm-empty-icon { font-size: 1.8rem; margin-bottom: 0.35rem; }
 
 @media (max-width: 540px) {
   .pm-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }

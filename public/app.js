@@ -3671,8 +3671,6 @@ function _pmRefreshUI() {
     countEl.textContent = `${cards.length} / ${PM_MAX_PHOTOS} fotiek`;
     countEl.classList.toggle('limit', cards.length >= PM_MAX_PHOTOS);
   }
-  const emptyEl = document.getElementById('pm-empty');
-  if (emptyEl) emptyEl.style.display = cards.length === 0 ? '' : 'none';
   // Trigger autosave (photos changed)
   _propDraftScheduleSave();
 }
