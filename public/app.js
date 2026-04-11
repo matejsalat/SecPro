@@ -78,6 +78,7 @@ function showPage(id) {
   if (id === 'ai') renderAiSettingsPage();
   if (id === 'saved-leads') renderSavedLeads();
   if (id === 'dokumenty') renderDocs();
+  if (id === 'clients' && typeof renderClients === 'function') renderClients();
   window.scrollTo(0, 0);
 }
 
@@ -6228,6 +6229,232 @@ const CONTACTS_KEY = 'secpro_contacts';
 function getContacts() { return _getCached('contacts', []); }
 function saveContacts(arr) { _setCached('contacts', arr); }
 
+// ===================== CLIENTS (sellers + buyers) =====================
+const CLIENT_STAGE_LABELS = {
+  new:      { label: 'Nový lead',         icon: '🆕', color: '#64748B', bg: '#F1F5F9' },
+  viewing:  { label: 'Obhliadka',         icon: '👀', color: '#0891B2', bg: '#ECFEFF' },
+  offer:    { label: 'Ponuka',            icon: '💬', color: '#7C3AED', bg: '#F3E8FF' },
+  reserved: { label: 'Rezervácia',        icon: '🔒', color: '#D97706', bg: '#FEF3C7' },
+  contract: { label: 'Zmluva podpísaná',  icon: '📝', color: '#0D9488', bg: '#CCFBF1' },
+  closed:   { label: 'Uzavretý',          icon: '✅', color: '#16A34A', bg: '#DCFCE7' },
+  lost:     { label: 'Stratený',          icon: '❌', color: '#DC2626', bg: '#FEE2E2' },
+};
+const CLIENT_TYPE_LABELS = {
+  seller: { label: 'Predávajúci', icon: '🏠', color: '#0D9488' },
+  buyer:  { label: 'Kupujúci',    icon: '🔑', color: '#2563EB' },
+};
+const CLIENT_ACTIVE_STAGES = ['new','viewing','offer','reserved','contract'];
+let cli_type_filter = 'all';
+
+function getClients() { return _getCached('clients', []); }
+function saveClients(arr) { _setCached('clients', arr); }
+
+function setClientTypeFilter(t) {
+  cli_type_filter = t;
+  document.querySelectorAll('#cli-stats .cli-stat').forEach(el => {
+    el.classList.toggle('active', el.dataset.type === t);
+  });
+  renderClients();
+}
+
+function _populateClientPropertySelect(selectedId) {
+  const sel = document.getElementById('client-property');
+  if (!sel) return;
+  const props = (typeof getProperties === 'function') ? getProperties() : [];
+  sel.innerHTML = '<option value="">— žiadna —</option>' +
+    props.map(p => {
+      const label = (p.title || 'Bez názvu') + (p.city ? ' · ' + p.city : '');
+      return `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+}
+
+function openClientForm(id) {
+  document.getElementById('client-edit-id').value = id || '';
+  document.getElementById('client-modal-title').textContent = id ? 'Upraviť klienta' : 'Pridať klienta';
+
+  if (id) {
+    const c = getClients().find(x => x.id === id);
+    if (c) {
+      document.querySelector('input[name="client-type"][value="' + (c.type || 'seller') + '"]').checked = true;
+      document.getElementById('client-name').value = c.name || '';
+      document.getElementById('client-phone').value = c.phone || '';
+      document.getElementById('client-email').value = c.email || '';
+      document.getElementById('client-stage').value = c.stage || 'new';
+      document.getElementById('client-notes').value = c.notes || '';
+      _populateClientPropertySelect(c.propertyId || '');
+    }
+  } else {
+    document.querySelector('input[name="client-type"][value="seller"]').checked = true;
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-phone').value = '';
+    document.getElementById('client-email').value = '';
+    document.getElementById('client-stage').value = 'new';
+    document.getElementById('client-notes').value = '';
+    _populateClientPropertySelect('');
+  }
+  document.getElementById('client-modal').style.display = 'block';
+}
+
+function closeClientForm() {
+  document.getElementById('client-modal').style.display = 'none';
+}
+
+function saveClient() {
+  const name = document.getElementById('client-name').value.trim();
+  if (!name) { alert('Vyplňte meno klienta.'); return; }
+
+  const editId = document.getElementById('client-edit-id').value;
+  const clients = getClients();
+  const data = {
+    id: editId || Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    type:  document.querySelector('input[name="client-type"]:checked').value,
+    name,
+    phone: document.getElementById('client-phone').value.trim(),
+    email: document.getElementById('client-email').value.trim(),
+    propertyId: document.getElementById('client-property').value || '',
+    stage: document.getElementById('client-stage').value,
+    notes: document.getElementById('client-notes').value.trim(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (editId) {
+    const idx = clients.findIndex(c => c.id === editId);
+    if (idx !== -1) {
+      data.createdAt = clients[idx].createdAt;
+      clients[idx] = data;
+    }
+  } else {
+    data.createdAt = data.updatedAt;
+    clients.unshift(data);
+  }
+
+  saveClients(clients);
+  closeClientForm();
+  renderClients();
+}
+
+async function deleteClient(id, ev) {
+  if (ev) ev.stopPropagation();
+  const ok = (typeof secConfirm === 'function')
+    ? await secConfirm({ message: 'Naozaj chcete odstrániť tohto klienta?', type: 'danger', ok: 'Odstrániť' })
+    : confirm('Naozaj chcete odstrániť tohto klienta?');
+  if (!ok) return;
+  saveClients(getClients().filter(c => c.id !== id));
+  renderClients();
+}
+
+function advanceClientStage(id, ev) {
+  if (ev) ev.stopPropagation();
+  const order = ['new','viewing','offer','reserved','contract','closed'];
+  const clients = getClients();
+  const idx = clients.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  const cur = clients[idx].stage || 'new';
+  const curPos = order.indexOf(cur);
+  if (curPos === -1 || curPos === order.length - 1) return;
+  clients[idx].stage = order[curPos + 1];
+  clients[idx].updatedAt = new Date().toISOString();
+  saveClients(clients);
+  renderClients();
+}
+
+function _clientPropertyLabel(propId) {
+  if (!propId) return null;
+  const props = (typeof getProperties === 'function') ? getProperties() : [];
+  const p = props.find(x => x.id === propId);
+  if (!p) return null;
+  return (p.title || 'Bez názvu') + (p.city ? ' · ' + p.city : '');
+}
+
+function renderClients() {
+  const listEl = document.getElementById('cli-list');
+  const emptyEl = document.getElementById('cli-empty');
+  const countEl = document.getElementById('cli-count');
+  if (!listEl) return;
+
+  const all = getClients();
+  const search = (document.getElementById('cli-search')?.value || '').toLowerCase();
+  const stageFilter = document.getElementById('cli-filter-stage')?.value || '';
+
+  // Update stat counters (from full dataset)
+  const statAll = document.getElementById('cli-stat-all');
+  const statSeller = document.getElementById('cli-stat-seller');
+  const statBuyer = document.getElementById('cli-stat-buyer');
+  const statActive = document.getElementById('cli-stat-active');
+  if (statAll) statAll.textContent = all.length;
+  if (statSeller) statSeller.textContent = all.filter(c => c.type === 'seller').length;
+  if (statBuyer) statBuyer.textContent = all.filter(c => c.type === 'buyer').length;
+  if (statActive) statActive.textContent = all.filter(c => CLIENT_ACTIVE_STAGES.includes(c.stage || 'new')).length;
+
+  // Apply filters
+  const filtered = all.filter(c => {
+    if (cli_type_filter === 'seller' && c.type !== 'seller') return false;
+    if (cli_type_filter === 'buyer' && c.type !== 'buyer') return false;
+    if (cli_type_filter === 'active' && !CLIENT_ACTIVE_STAGES.includes(c.stage || 'new')) return false;
+    if (stageFilter && (c.stage || 'new') !== stageFilter) return false;
+    if (search) {
+      const hay = [c.name, c.phone, c.email, c.notes, _clientPropertyLabel(c.propertyId) || ''].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (countEl) countEl.textContent = filtered.length + ' / ' + all.length + ' klientov';
+
+  if (all.length === 0) {
+    listEl.innerHTML = '';
+    listEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  listEl.style.display = '';
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-light);font-size:0.9rem;">Žiadni klienti nezodpovedajú filtru</div>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(c => {
+    const type = CLIENT_TYPE_LABELS[c.type] || CLIENT_TYPE_LABELS.seller;
+    const stage = CLIENT_STAGE_LABELS[c.stage || 'new'];
+    const propLabel = _clientPropertyLabel(c.propertyId);
+    const initials = (c.name || '?').split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+    const notesPreview = c.notes ? (c.notes.length > 90 ? c.notes.slice(0, 90) + '…' : c.notes) : '';
+    const showAdvance = (c.stage || 'new') !== 'closed' && (c.stage || 'new') !== 'lost';
+    return `
+      <div class="cli-card cli-card-${c.type || 'seller'}" onclick="openClientForm('${c.id}')">
+        <div class="cli-card-head">
+          <div class="cli-avatar" style="background:${type.color}1a;color:${type.color};">${esc(initials) || '?'}</div>
+          <div class="cli-card-head-text">
+            <div class="cli-name">${esc(c.name)}</div>
+            <div class="cli-type-chip" style="color:${type.color};">${type.icon} ${type.label}</div>
+          </div>
+          <div class="cli-card-actions">
+            <button class="cli-icon-btn" title="Odstrániť" onclick="deleteClient('${c.id}', event)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="cli-card-body">
+          ${c.phone ? `<div class="cli-row"><span class="cli-row-icon">📞</span><a href="tel:${esc(c.phone)}" onclick="event.stopPropagation()">${esc(c.phone)}</a></div>` : ''}
+          ${c.email ? `<div class="cli-row"><span class="cli-row-icon">✉️</span><a href="mailto:${esc(c.email)}" onclick="event.stopPropagation()">${esc(c.email)}</a></div>` : ''}
+          ${propLabel ? `<div class="cli-row cli-row-prop"><span class="cli-row-icon">🏡</span><span title="${esc(propLabel)}">${esc(propLabel)}</span></div>` : ''}
+          ${notesPreview ? `<div class="cli-notes">${esc(notesPreview)}</div>` : ''}
+        </div>
+
+        <div class="cli-card-footer">
+          <span class="cli-stage-pill" style="background:${stage.bg};color:${stage.color};">${stage.icon} ${stage.label}</span>
+          ${showAdvance ? `<button class="cli-advance-btn" onclick="advanceClientStage('${c.id}', event)" title="Posunúť do ďalšej fázy">Ďalšia fáza →</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => { try { renderClients(); } catch {} });
+
 const CONTACT_CATEGORY_LABELS = {
   klient: 'Klient',
   potencialny: 'Potenciálny klient',
@@ -6466,6 +6693,7 @@ let _dataSynced = false;
 const _LS_MAP = {
   properties: 'secpro_properties',
   contacts: 'secpro_contacts',
+  clients: 'secpro_clients',
   saved_leads: 'secpro_saved_leads',
   aml: 'secpro_aml',
   history: 'finio-history',

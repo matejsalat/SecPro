@@ -156,6 +156,9 @@
       <div class="nav-item" onclick="showPage('myproperties')">
         <span class="nav-icon"><i data-lucide="home"></i></span> Moje nehnuteľnosti
       </div>
+      <div class="nav-item" onclick="showPage('clients')">
+        <span class="nav-icon"><i data-lucide="users"></i></span> Klienti
+      </div>
       <div class="nav-item" onclick="showPage('contacts')">
         <span class="nav-icon"><i data-lucide="contact"></i></span> Kontakty
       </div>
@@ -2137,6 +2140,151 @@
     </div>
 
     <!-- CONTACTS PAGE -->
+    <!-- KLIENTI PAGE -->
+    <div id="page-clients" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+        <div>
+          <h2 style="margin:0;font-size:1.35rem;color:var(--dark);">Klienti</h2>
+          <p style="margin:0.25rem 0 0;font-size:0.82rem;color:var(--text-light);">Predávajúci a kupujúci — jednoduchá evidencia obchodov</p>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-primary" onclick="openClientForm()">
+            <i data-lucide="plus" style="width:16px;height:16px;margin-right:4px;"></i> Pridať klienta
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="cli-stats" id="cli-stats">
+        <div class="cli-stat cli-stat-all" data-type="all" onclick="setClientTypeFilter('all')">
+          <div class="cli-stat-label">Celkovo</div>
+          <div class="cli-stat-value" id="cli-stat-all">0</div>
+        </div>
+        <div class="cli-stat cli-stat-seller" data-type="seller" onclick="setClientTypeFilter('seller')">
+          <div class="cli-stat-label">Predávajúci</div>
+          <div class="cli-stat-value" id="cli-stat-seller">0</div>
+        </div>
+        <div class="cli-stat cli-stat-buyer" data-type="buyer" onclick="setClientTypeFilter('buyer')">
+          <div class="cli-stat-label">Kupujúci</div>
+          <div class="cli-stat-value" id="cli-stat-buyer">0</div>
+        </div>
+        <div class="cli-stat cli-stat-active" data-type="active" onclick="setClientTypeFilter('active')">
+          <div class="cli-stat-label">Aktívne obchody</div>
+          <div class="cli-stat-value" id="cli-stat-active">0</div>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar" style="margin-top:1rem;">
+        <div class="filter-bar-inner">
+          <div class="filter-search-wrap">
+            <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" class="filter-search" id="cli-search" placeholder="Hľadať meno, telefón, email, poznámku..." oninput="renderClients()" />
+          </div>
+          <div class="filter-divider"></div>
+          <select class="filter-select" id="cli-filter-stage" onchange="renderClients()" style="min-width:160px;">
+            <option value="">Všetky stavy</option>
+            <option value="new">🆕 Nový lead</option>
+            <option value="viewing">👀 Obhliadka</option>
+            <option value="offer">💬 Ponuka / Rokovanie</option>
+            <option value="reserved">🔒 Rezervácia</option>
+            <option value="contract">📝 Zmluva podpísaná</option>
+            <option value="closed">✅ Uzavretý</option>
+            <option value="lost">❌ Stratený</option>
+          </select>
+          <span class="filter-count" id="cli-count"></span>
+        </div>
+      </div>
+
+      <!-- Clients grid -->
+      <div id="cli-list" class="cli-grid"></div>
+
+      <!-- Empty state -->
+      <div id="cli-empty" style="display:none;text-align:center;padding:3rem;">
+        <div style="font-size:3rem;margin-bottom:0.75rem;">👥</div>
+        <p style="font-size:1.1rem;color:var(--text-light);margin-bottom:1rem;">Zatiaľ nemáte žiadnych klientov</p>
+        <button class="btn btn-primary" onclick="openClientForm()">Pridať prvého klienta</button>
+      </div>
+    </div>
+
+    <!-- CLIENT FORM MODAL -->
+    <div class="modal" id="client-modal">
+      <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header">
+          <h3 id="client-modal-title">Pridať klienta</h3>
+          <span class="close" onclick="closeClientForm()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="client-edit-id" />
+
+          <!-- Type toggle -->
+          <div class="form-group">
+            <label>Typ klienta *</label>
+            <div class="cli-type-toggle">
+              <label class="cli-type-opt">
+                <input type="radio" name="client-type" value="seller" checked />
+                <span class="cli-type-card">
+                  <span class="cli-type-icon">🏠</span>
+                  <span class="cli-type-text">Predávajúci</span>
+                </span>
+              </label>
+              <label class="cli-type-opt">
+                <input type="radio" name="client-type" value="buyer" />
+                <span class="cli-type-card">
+                  <span class="cli-type-icon">🔑</span>
+                  <span class="cli-type-text">Kupujúci</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Meno a priezvisko *</label>
+            <input type="text" id="client-name" placeholder="napr. Jozef Novák" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Telefón</label>
+              <input type="tel" id="client-phone" placeholder="+421 9XX XXX XXX" />
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="client-email" placeholder="klient@email.sk" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Priradená nehnuteľnosť</label>
+            <select id="client-property"></select>
+            <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.25rem;">Ktorý inzerát sa tohto klienta týka</div>
+          </div>
+
+          <div class="form-group">
+            <label>Stav obchodu *</label>
+            <select id="client-stage">
+              <option value="new">🆕 Nový lead</option>
+              <option value="viewing">👀 Obhliadka dohodnutá</option>
+              <option value="offer">💬 Ponuka / Rokovanie</option>
+              <option value="reserved">🔒 Rezervácia</option>
+              <option value="contract">📝 Zmluva podpísaná</option>
+              <option value="closed">✅ Uzavretý</option>
+              <option value="lost">❌ Stratený</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Poznámky</label>
+            <textarea id="client-notes" rows="4" placeholder="Dôležité info, preferencie, ďalšie kroky..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeClientForm()">Zrušiť</button>
+          <button class="btn btn-primary" onclick="saveClient()">Uložiť</button>
+        </div>
+      </div>
+    </div>
+
     <div id="page-contacts" class="page">
       <!-- Toolbar -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
