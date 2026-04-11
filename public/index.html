@@ -2208,17 +2208,17 @@
     </div>
 
     <!-- CLIENT FORM MODAL -->
-    <div class="modal" id="client-modal">
-      <div class="modal-content" style="max-width:560px;">
-        <div class="modal-header">
-          <h3 id="client-modal-title">Pridať klienta</h3>
-          <span class="close" onclick="closeClientForm()">&times;</span>
+    <div id="client-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);overflow-y:auto;padding:2rem;">
+      <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="background:linear-gradient(135deg,#0B2A3C,#1A7A8A);color:#fff;padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
+          <h3 id="client-modal-title" style="margin:0;font-size:1.15rem;">Pridať klienta</h3>
+          <button onclick="closeClientForm()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.5rem;line-height:1;">&times;</button>
         </div>
-        <div class="modal-body">
+        <div style="padding:1.5rem;">
           <input type="hidden" id="client-edit-id" />
 
           <!-- Type toggle -->
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom:1rem;">
             <label>Typ klienta *</label>
             <div class="cli-type-toggle">
               <label class="cli-type-opt">
@@ -2238,12 +2238,11 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Meno a priezvisko *</label>
-            <input type="text" id="client-name" placeholder="napr. Jozef Novák" />
-          </div>
-
-          <div class="form-row">
+          <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Meno a priezvisko *</label>
+              <input type="text" id="client-name" placeholder="napr. Jozef Novák" />
+            </div>
             <div class="form-group">
               <label>Telefón</label>
               <input type="tel" id="client-phone" placeholder="+421 9XX XXX XXX" />
@@ -2252,35 +2251,33 @@
               <label>E-mail</label>
               <input type="email" id="client-email" placeholder="klient@email.sk" />
             </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Priradená nehnuteľnosť</label>
+              <select id="client-property"></select>
+              <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.25rem;">Ktorý inzerát sa tohto klienta týka</div>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Stav obchodu *</label>
+              <select id="client-stage">
+                <option value="new">🆕 Nový lead</option>
+                <option value="viewing">👀 Obhliadka dohodnutá</option>
+                <option value="offer">💬 Ponuka / Rokovanie</option>
+                <option value="reserved">🔒 Rezervácia</option>
+                <option value="contract">📝 Zmluva podpísaná</option>
+                <option value="closed">✅ Uzavretý</option>
+                <option value="lost">❌ Stratený</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Poznámky</label>
+              <textarea id="client-notes" rows="4" placeholder="Dôležité info, preferencie, ďalšie kroky..." style="width:100%;padding:0.65rem 0.85rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.95rem;font-family:'Inter',sans-serif;resize:vertical;outline:none;background:#FAFBFC;"></textarea>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label>Priradená nehnuteľnosť</label>
-            <select id="client-property"></select>
-            <div style="font-size:0.72rem;color:var(--text-light);margin-top:0.25rem;">Ktorý inzerát sa tohto klienta týka</div>
+          <div style="display:flex;gap:0.75rem;margin-top:1.25rem;justify-content:flex-end;">
+            <button class="btn" style="background:#f0f0f0;color:#333;" onclick="closeClientForm()">Zrušiť</button>
+            <button class="btn btn-primary" onclick="saveClient()">Uložiť klienta</button>
           </div>
-
-          <div class="form-group">
-            <label>Stav obchodu *</label>
-            <select id="client-stage">
-              <option value="new">🆕 Nový lead</option>
-              <option value="viewing">👀 Obhliadka dohodnutá</option>
-              <option value="offer">💬 Ponuka / Rokovanie</option>
-              <option value="reserved">🔒 Rezervácia</option>
-              <option value="contract">📝 Zmluva podpísaná</option>
-              <option value="closed">✅ Uzavretý</option>
-              <option value="lost">❌ Stratený</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Poznámky</label>
-            <textarea id="client-notes" rows="4" placeholder="Dôležité info, preferencie, ďalšie kroky..."></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn" onclick="closeClientForm()">Zrušiť</button>
-          <button class="btn btn-primary" onclick="saveClient()">Uložiť</button>
         </div>
       </div>
     </div>
