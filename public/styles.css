@@ -4131,6 +4131,61 @@
 }
 .pm-card.cover .pm-cover-badge { display: inline-block; }
 
+/* Category badge (always visible, top-right) */
+.pm-cat-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+  z-index: 2;
+  max-width: calc(100% - 12px);
+  pointer-events: none;
+}
+.pm-cat-badge .pm-cat-icon { font-size: 0.78rem; line-height: 1; }
+.pm-cat-badge .pm-cat-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Category selector (bottom of card, transparent overlay the whole bottom strip) */
+.pm-cat-select {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 4;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(15,23,42,0.12);
+  border-radius: 8px;
+  padding: 4px 22px 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  backdrop-filter: blur(6px);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%230F172A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pm-cat-select:hover { background-color: #fff; border-color: var(--primary-lighter); }
+.pm-cat-select:focus { outline: 2px solid var(--primary-light); outline-offset: 1px; }
+
 /* Hover actions overlay */
 .pm-actions {
   position: absolute;

@@ -3129,9 +3129,10 @@ function _propFormReadValues() {
     const el = document.getElementById(id);
     if (el) v[id] = el.value;
   });
-  // Also collect photo data URLs from preview
-  const photoEls = document.querySelectorAll('#prop-photo-preview img');
-  v.photos = Array.from(photoEls).map(img => img.src).slice(0, 10);
+  // Also collect photo data URLs + categories from preview
+  const cards = Array.from(document.querySelectorAll('#prop-photo-preview .pm-card')).slice(0, 10);
+  v.photos = cards.map(c => c.querySelector('img')?.src).filter(Boolean);
+  v.photoCategories = cards.map(c => c.dataset.category || '');
   return v;
 }
 
@@ -3144,7 +3145,8 @@ function _propFormApplyValues(v) {
   if (Array.isArray(v.photos) && v.photos.length > 0) {
     const preview = document.getElementById('prop-photo-preview');
     preview.innerHTML = '';
-    v.photos.forEach(src => preview.appendChild(_pmCreateCard(src)));
+    const cats = Array.isArray(v.photoCategories) ? v.photoCategories : [];
+    v.photos.forEach((src, i) => preview.appendChild(_pmCreateCard(src, cats[i] || '')));
     if (typeof _pmRefreshUI === 'function') _pmRefreshUI();
   }
 }
@@ -3554,11 +3556,12 @@ function openPropertyForm(editId) {
       renderInterestedList();
       renderViewingList();
       updateSubTabCounts();
-      // Show existing photos
+      // Show existing photos (with categories if available)
       if (p.photos && p.photos.length > 0) {
         const preview = document.getElementById('prop-photo-preview');
         preview.innerHTML = '';
-        p.photos.forEach(src => preview.appendChild(_pmCreateCard(src)));
+        const cats = Array.isArray(p.photoCategories) ? p.photoCategories : [];
+        p.photos.forEach((src, i) => preview.appendChild(_pmCreateCard(src, cats[i] || '')));
         _pmRefreshUI();
       }
     }
@@ -3633,13 +3636,45 @@ function compressImage(file, maxWidth, quality) {
 const PM_MAX_PHOTOS = 10;
 let pm_sortable = null;
 
-function _pmCreateCard(dataUrl) {
+// Photo categories (rooms / views)
+const PM_CATEGORIES = [
+  { value: '',           label: 'Nezaradené',    icon: '🏷️' },
+  { value: 'exterior',   label: 'Exteriér',      icon: '🏠' },
+  { value: 'livingroom', label: 'Obývačka',      icon: '🛋️' },
+  { value: 'kitchen',    label: 'Kuchyňa',       icon: '🍳' },
+  { value: 'bedroom',    label: 'Spálňa',        icon: '🛏️' },
+  { value: 'bathroom',   label: 'Kúpeľňa',       icon: '🛁' },
+  { value: 'wc',         label: 'WC',            icon: '🚽' },
+  { value: 'hall',       label: 'Predsieň',      icon: '🚪' },
+  { value: 'balcony',    label: 'Balkón',        icon: '🌇' },
+  { value: 'garden',     label: 'Záhrada',       icon: '🌳' },
+  { value: 'floorplan',  label: 'Pôdorys',       icon: '📐' },
+  { value: 'other',      label: 'Ostatné',       icon: '📷' },
+];
+function _pmCategoryLabel(val) {
+  const c = PM_CATEGORIES.find(x => x.value === (val || ''));
+  return c ? c.label : 'Nezaradené';
+}
+function _pmCategoryIcon(val) {
+  const c = PM_CATEGORIES.find(x => x.value === (val || ''));
+  return c ? c.icon : '🏷️';
+}
+function _pmCategoryOptionsHtml(selected) {
+  return PM_CATEGORIES.map(c =>
+    `<option value="${c.value}" ${c.value === (selected || '') ? 'selected' : ''}>${c.icon} ${c.label}</option>`
+  ).join('');
+}
+
+function _pmCreateCard(dataUrl, category) {
+  const cat = category || '';
   const card = document.createElement('div');
   card.className = 'pm-card';
+  card.dataset.category = cat;
   card.innerHTML = `
     <div class="pm-order">1</div>
     <div class="pm-cover-badge">TITULNÁ</div>
     <img src="${dataUrl}" alt="foto" draggable="false" />
+    <div class="pm-cat-badge"><span class="pm-cat-icon">${_pmCategoryIcon(cat)}</span><span class="pm-cat-text">${_pmCategoryLabel(cat)}</span></div>
     <div class="pm-actions">
       <button type="button" class="pm-action-btn" title="Otočiť vľavo 90°" onclick="pmRotatePhoto(this, -90)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 2v6h6"/><path d="M21 12A9 9 0 006 5.3L3 8"/></svg>
@@ -3653,8 +3688,23 @@ function _pmCreateCard(dataUrl) {
       <button type="button" class="pm-action-btn danger" title="Odstrániť" onclick="pmRemovePhoto(this)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
       </button>
-    </div>`;
+    </div>
+    <select class="pm-cat-select" onchange="pmSetCategory(this)" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" title="Kategória fotky">
+      ${_pmCategoryOptionsHtml(cat)}
+    </select>`;
   return card;
+}
+
+function pmSetCategory(sel) {
+  const card = sel.closest('.pm-card');
+  if (!card) return;
+  const val = sel.value || '';
+  card.dataset.category = val;
+  const ic = card.querySelector('.pm-cat-icon');
+  const tx = card.querySelector('.pm-cat-text');
+  if (ic) ic.textContent = _pmCategoryIcon(val);
+  if (tx) tx.textContent = _pmCategoryLabel(val);
+  if (typeof _propDraftScheduleSave === 'function') _propDraftScheduleSave();
 }
 
 function _pmRefreshUI() {
@@ -5137,9 +5187,10 @@ async function saveProperty() {
   if (!phone) { alert('Vyplňte telefónne číslo'); return; }
   if (!priceVal) { alert('Vyplňte cenu'); return; }
 
-  // Collect photos from preview (data URLs)
-  const photoEls = document.querySelectorAll('#prop-photo-preview img');
-  const photos = Array.from(photoEls).map(img => img.src).slice(0, 10);
+  // Collect photos + categories from preview (data URLs)
+  const photoCards = Array.from(document.querySelectorAll('#prop-photo-preview .pm-card')).slice(0, 10);
+  const photos = photoCards.map(c => c.querySelector('img')?.src).filter(Boolean);
+  const photoCategories = photoCards.map(c => c.dataset.category || '');
 
   const prop = {
     id: document.getElementById('prop-edit-id').value || Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
@@ -5162,6 +5213,7 @@ async function saveProperty() {
     description: document.getElementById('prop-description').value.trim(),
     notes: document.getElementById('prop-notes').value.trim(),
     photos: photos,
+    photoCategories: photoCategories,
     interested: tempInterested,
     viewings: tempViewings,
     updatedAt: new Date().toISOString(),
