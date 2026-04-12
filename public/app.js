@@ -80,6 +80,7 @@ function showPage(id) {
   if (id === 'ai') renderAiSettingsPage();
   if (id === 'saved-leads') renderSavedLeads();
   if (id === 'dokumenty') renderDocs();
+  if (id === 'signatures' && typeof renderSignatures === 'function') renderSignatures();
   if (id === 'clients' && typeof renderClients === 'function') renderClients();
   window.scrollTo(0, 0);
 }
@@ -4406,6 +4407,59 @@ function openNaborModal(propId) {
 
 function closeNaborModal() {
   document.getElementById('naborModal').style.display = 'none';
+  _naborSigState = { seller: null, agent: null };
+}
+
+// ----- Náborák signatures -----
+let _naborSigState = { seller: null, agent: null };
+
+function _refreshNaborSigPreview(role) {
+  const s = _naborSigState[role];
+  const box = document.getElementById(`nabor-sig-${role}-box`);
+  const meta = document.getElementById(`nabor-sig-${role}-meta`);
+  const clearBtn = document.getElementById(`nabor-sig-${role}-clear`);
+  if (!box) return;
+  if (s && s.dataUrl) {
+    box.innerHTML = `<img src="${s.dataUrl}" style="max-width:100%;max-height:100px;object-fit:contain;" />`;
+    if (meta) { meta.style.display = 'block'; meta.textContent = `${s.signerName} · ${new Date(s.signedAt).toLocaleString('sk-SK')}`; }
+    if (clearBtn) clearBtn.style.display = '';
+  } else {
+    box.innerHTML = '<div class="profile-sig-empty">Bez podpisu</div>';
+    if (meta) meta.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+}
+
+function openNaborSignature(role) {
+  const propId = document.getElementById('nabor-prop-id').value;
+  const profile = (typeof getProfile === 'function') ? getProfile() : {};
+  let signerName = '';
+  if (role === 'agent') {
+    signerName = profile.name || 'Maklér';
+  } else {
+    // Try to pick name from vlastník field in nábor form
+    signerName = (document.getElementById('nb-vlastnik')?.value || document.getElementById('nd-vlastnik')?.value || document.getElementById('np-vlastnik')?.value || '').trim();
+  }
+  openSignaturePad({
+    title: role === 'agent' ? 'Podpis makléra' : 'Podpis predávajúceho',
+    subtitle: role === 'agent' ? 'Váš profesionálny podpis' : 'Podpis predávajúceho/vlastníka nehnuteľnosti',
+    signerName,
+    signerRole: role === 'agent' ? 'Maklér' : 'Predávajúci',
+    documentType: 'nabor',
+    documentId: propId,
+    docRef: 'Náborový list – ' + (document.getElementById('nb-adresa')?.value || document.getElementById('nd-adresa')?.value || document.getElementById('np-adresa')?.value || 'nehnuteľnosť'),
+    allowUseStored: role === 'agent',
+    allowSaveToProfile: role === 'agent',
+    onConfirm: (dataUrl, entry) => {
+      _naborSigState[role] = { dataUrl, signerName: entry.signerName, signedAt: entry.signedAt, auditId: entry.id };
+      _refreshNaborSigPreview(role);
+    }
+  });
+}
+
+function clearNaborSignature(role) {
+  _naborSigState[role] = null;
+  _refreshNaborSigPreview(role);
 }
 
 // Slovak diacritics fixer for jsPDF helvetica (global)
@@ -4696,6 +4750,42 @@ function generateNaborPDF() {
     fieldRow('Provízia pre RK', v('nd-provizia'));
     fieldRow2('Fotenie', v('nd-fotenie'), 'Inzercia', v('nd-inzercia'));
     fieldRow2('Maklér', v('nd-makler'), 'Dátum', v('nd-datum'));
+  }
+
+  // Signatures block (before footer)
+  const sellerSig = _naborSigState && _naborSigState.seller;
+  const agentSig = _naborSigState && _naborSigState.agent;
+  if (sellerSig || agentSig) {
+    checkPage(55);
+    y += 8;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, pw - margin, y);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setTextColor(11, 42, 60);
+    doc.text(sk('Podpisy'), margin, y);
+    y += 4;
+    const colW = (contentW - 8) / 2;
+    const sigY = y;
+    // Seller
+    if (sellerSig) {
+      try { doc.addImage(sellerSig.dataUrl, 'PNG', margin, sigY, Math.min(colW, 70), 25); } catch (e) {}
+    }
+    doc.setDrawColor(100, 100, 100);
+    doc.line(margin, sigY + 28, margin + colW, sigY + 28);
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    doc.text(sk('Predávajúci: ' + (sellerSig ? sellerSig.signerName : '')), margin, sigY + 32);
+    if (sellerSig) doc.text(sk(new Date(sellerSig.signedAt).toLocaleString('sk-SK')), margin, sigY + 36);
+    // Agent
+    const ax = margin + colW + 8;
+    if (agentSig) {
+      try { doc.addImage(agentSig.dataUrl, 'PNG', ax, sigY, Math.min(colW, 70), 25); } catch (e) {}
+    }
+    doc.line(ax, sigY + 28, ax + colW, sigY + 28);
+    doc.text(sk('Maklér: ' + (agentSig ? agentSig.signerName : '')), ax, sigY + 32);
+    if (agentSig) doc.text(sk(new Date(agentSig.signedAt).toLocaleString('sk-SK')), ax, sigY + 36);
+    y = sigY + 40;
   }
 
   // Footer
@@ -6992,6 +7082,7 @@ const _LS_MAP = {
   contacts: 'secpro_contacts',
   clients: 'secpro_clients',
   profile: 'secpro_profile',
+  signatures: 'secpro_signatures',
   saved_leads: 'secpro_saved_leads',
   aml: 'secpro_aml',
   history: 'finio-history',
@@ -7516,14 +7607,64 @@ function openProfileModal() {
     cb.checked = specs.includes(cb.value);
   });
   _refreshProfileAvatarPreview();
+  _refreshProfileSignaturePreview();
   document.getElementById('profile-modal').style.display = 'block';
   document.body.style.overflow = 'hidden';
+}
+
+let _profileSignatureTemp = null;
+function _refreshProfileSignaturePreview() {
+  const box = document.getElementById('profile-sig-box');
+  const removeBtn = document.getElementById('profile-sig-remove');
+  if (!box) return;
+  const profile = getProfile();
+  const sig = _profileSignatureTemp !== null ? _profileSignatureTemp : (profile.signature || '');
+  if (sig) {
+    box.innerHTML = `<img src="${sig}" alt="Podpis" />`;
+    if (removeBtn) removeBtn.style.display = '';
+  } else {
+    box.innerHTML = '<div class="profile-sig-empty">Zatiaľ nemáte uložený podpis. Po nakreslení sa bude automaticky používať v dokumentoch, AML a náboráku.</div>';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function openProfileSignaturePad() {
+  const name = document.getElementById('profile-name').value.trim() || 'Maklér';
+  openSignaturePad({
+    title: 'Môj podpis do profilu',
+    subtitle: 'Tento podpis sa použije v dokumentoch, AML a náboráku',
+    signerName: name,
+    signerRole: 'Maklér',
+    documentType: 'profile',
+    documentRef: 'Profilový podpis',
+    allowSaveToProfile: false,
+    allowUseStored: false,
+    onConfirm: (dataUrl) => {
+      _profileSignatureTemp = dataUrl;
+      _refreshProfileSignaturePreview();
+      // Also persist immediately so it's available right away in other modals
+      const prof = getProfile();
+      prof.signature = dataUrl;
+      prof.updatedAt = new Date().toISOString();
+      saveProfileData(prof);
+    }
+  });
+}
+
+function removeProfileSignature() {
+  _profileSignatureTemp = '';
+  _refreshProfileSignaturePreview();
+  const prof = getProfile();
+  delete prof.signature;
+  prof.updatedAt = new Date().toISOString();
+  saveProfileData(prof);
 }
 
 function closeProfileModal() {
   document.getElementById('profile-modal').style.display = 'none';
   document.body.style.overflow = '';
   _profileAvatarTemp = null;
+  _profileSignatureTemp = null;
 }
 
 function _refreshProfileAvatarPreview() {
@@ -7600,8 +7741,10 @@ function saveProfile() {
     instagram: document.getElementById('profile-instagram').value.trim(),
     specializations: specs,
     avatar: _profileAvatarTemp || null,
+    signature: (_profileSignatureTemp !== null && _profileSignatureTemp !== '') ? _profileSignatureTemp : (getProfile().signature || null),
     updatedAt: new Date().toISOString(),
   };
+  if (_profileSignatureTemp === '') delete profile.signature;
   saveProfileData(profile);
   applyProfileToHeader();
   closeProfileModal();
@@ -7709,8 +7852,10 @@ function openAmlForm(editId) {
       document.getElementById('aml-doc-preview').innerHTML = (r.docsOtherNames || []).map(n =>
         '<div style="padding:4px 10px;background:#F1F5F9;border-radius:6px;font-size:0.75rem;color:var(--text-light);">' + esc(n) + '</div>'
       ).join('');
+      _amlSigTemp = r.signature ? { dataUrl: r.signature.dataUrl, signerName: r.signature.signerName, signedAt: r.signature.signedAt, auditId: r.signature.auditId } : null;
     }
   } else {
+    _amlSigTemp = null;
     // Reset form
     document.querySelector('input[name="aml-client-type"][value="fo"]').checked = true;
     amlToggleClientType();
@@ -7740,9 +7885,65 @@ function openAmlForm(editId) {
   document.getElementById('aml-check-status').innerHTML = '';
   document.getElementById('aml-check-matches').style.display = 'none';
   document.getElementById('aml-check-matches').innerHTML = '';
+  _refreshAmlSignaturePreview();
   document.getElementById('aml-modal').style.display = 'block';
 }
-function closeAmlForm() { document.getElementById('aml-modal').style.display = 'none'; }
+function closeAmlForm() {
+  document.getElementById('aml-modal').style.display = 'none';
+  _amlSigTemp = null;
+}
+
+// ----- AML signature helpers -----
+let _amlSigTemp = null; // { dataUrl, signerName, signedAt }
+function _refreshAmlSignaturePreview() {
+  const box = document.getElementById('aml-sig-preview');
+  const meta = document.getElementById('aml-sig-meta');
+  const clearBtn = document.getElementById('aml-sig-clear');
+  if (!box) return;
+  if (_amlSigTemp && _amlSigTemp.dataUrl) {
+    box.innerHTML = `<img src="${_amlSigTemp.dataUrl}" style="max-width:280px;max-height:100px;object-fit:contain;background:#fff;border-radius:6px;border:1px solid var(--border);padding:4px;" />`;
+    meta.style.display = 'block';
+    meta.textContent = `Podpísal: ${_amlSigTemp.signerName} · ${new Date(_amlSigTemp.signedAt).toLocaleString('sk-SK')}`;
+    if (clearBtn) clearBtn.style.display = '';
+  } else {
+    box.innerHTML = '<span style="color:var(--text-light);font-size:0.82rem;">Zatiaľ bez podpisu preverovanej osoby</span>';
+    meta.style.display = 'none';
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+}
+
+function openAmlSignature() {
+  const clientType = document.querySelector('input[name="aml-client-type"]:checked').value;
+  const name = clientType === 'fo'
+    ? ((document.getElementById('aml-fo-firstname').value.trim() + ' ' + document.getElementById('aml-fo-lastname').value.trim()).trim())
+    : document.getElementById('aml-po-statname').value.trim() || document.getElementById('aml-po-name').value.trim();
+  const editId = document.getElementById('aml-edit-id').value || ('aml-draft-' + Date.now());
+  openSignaturePad({
+    title: 'Podpis preverovanej osoby (AML)',
+    subtitle: 'Podpisom potvrdzujete správnosť poskytnutých údajov',
+    signerName: name,
+    signerRole: 'Preverovaná osoba',
+    documentType: 'aml',
+    documentId: editId,
+    docRef: 'AML preverenie – ' + (name || 'bez mena'),
+    docPayload: JSON.stringify({
+      name,
+      clientType,
+      sources: Array.from(document.querySelectorAll('#aml-source-grid .aml-source-chip.selected')).map(c => c.dataset.val),
+      pep: document.querySelector('input[name="aml-pep"]:checked').value,
+    }),
+    allowUseStored: false, // signer is client, not agent
+    onConfirm: (dataUrl, entry) => {
+      _amlSigTemp = { dataUrl, signerName: entry.signerName, signedAt: entry.signedAt, auditId: entry.id };
+      _refreshAmlSignaturePreview();
+    }
+  });
+}
+
+function clearAmlSignature() {
+  _amlSigTemp = null;
+  _refreshAmlSignaturePreview();
+}
 
 function amlToggleClientType() {
   const isFo = document.querySelector('input[name="aml-client-type"]:checked').value === 'fo';
@@ -8031,6 +8232,7 @@ function saveAml() {
     transactionIdCopy: document.getElementById('aml-tx-idcopy').value,
     transactionValue: document.getElementById('aml-tx-value').value,
     notes: document.getElementById('aml-notes').value.trim(),
+    signature: _amlSigTemp ? { dataUrl: _amlSigTemp.dataUrl, signerName: _amlSigTemp.signerName, signedAt: _amlSigTemp.signedAt, auditId: _amlSigTemp.auditId } : null,
     updatedAt: new Date().toISOString()
   };
 
@@ -10909,4 +11111,291 @@ function _doProtocolPreview() {
     wireListeners();
   }
 })();
+
+// ==================== E-SIGNATURE ====================
+// Reusable signature pad + audit trail.
+
+function getSignatures() { return _getCached('signatures', []) || []; }
+function saveSignatures(arr) { _setCached('signatures', arr); }
+
+// SHA-256 hash helper (async, returns hex string)
+async function sha256Hex(str) {
+  try {
+    const buf = new TextEncoder().encode(str || '');
+    const hash = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) { return ''; }
+}
+
+let _sigPadState = null; // { ctx, drawing, hasInk, onConfirm, context }
+
+function openSignaturePad(opts) {
+  // opts: { title, subtitle, signerName, signerRole, documentType, documentId, docRef, docPayload, allowSaveToProfile, onConfirm }
+  const modal = document.getElementById('signature-modal');
+  if (!modal) return;
+  document.getElementById('sig-title').textContent = opts.title || 'Elektronický podpis';
+  document.getElementById('sig-subtitle').textContent = opts.subtitle || 'Podpíšte sa v rámčeku nižšie';
+  document.getElementById('sig-signer-name').value = opts.signerName || '';
+  document.getElementById('sig-save-to-profile').checked = false;
+  document.getElementById('sig-save-to-profile-wrap').style.display = (opts.allowSaveToProfile === false) ? 'none' : '';
+
+  const profile = (typeof getProfile === 'function') ? getProfile() : {};
+  const storedRow = document.getElementById('sig-stored-row');
+  if (profile && profile.signature && opts.allowUseStored !== false) {
+    storedRow.style.display = 'flex';
+  } else {
+    storedRow.style.display = 'none';
+  }
+
+  const canvas = document.getElementById('sig-canvas');
+  // Fit internal resolution to displayed size for crisp lines
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(600, Math.floor(rect.width * (window.devicePixelRatio || 1)));
+  canvas.height = Math.floor(220 * (window.devicePixelRatio || 1));
+  const ctx = canvas.getContext('2d');
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#0B2A3C';
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  document.getElementById('sig-placeholder').style.display = 'flex';
+
+  _sigPadState = {
+    ctx, canvas, drawing: false, hasInk: false,
+    onConfirm: opts.onConfirm || (() => {}),
+    context: {
+      documentType: opts.documentType || 'other',
+      documentId: opts.documentId || '',
+      docRef: opts.docRef || '',
+      docPayload: opts.docPayload || '',
+      signerRole: opts.signerRole || '',
+    }
+  };
+
+  _attachSigPadEvents();
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSignaturePad(confirmed) {
+  const modal = document.getElementById('signature-modal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+  _detachSigPadEvents();
+  if (!confirmed) _sigPadState = null;
+}
+
+function clearSignatureCanvas() {
+  if (!_sigPadState) return;
+  const { ctx, canvas } = _sigPadState;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  _sigPadState.hasInk = false;
+  document.getElementById('sig-placeholder').style.display = 'flex';
+}
+
+function useStoredSignature() {
+  const profile = (typeof getProfile === 'function') ? getProfile() : {};
+  if (!profile.signature || !_sigPadState) return;
+  const { ctx, canvas } = _sigPadState;
+  const img = new Image();
+  img.onload = () => {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fit image centered inside canvas display size
+    const dispW = canvas.width / (window.devicePixelRatio || 1);
+    const dispH = canvas.height / (window.devicePixelRatio || 1);
+    const ratio = Math.min(dispW / img.width, dispH / img.height) * 0.85;
+    const w = img.width * ratio;
+    const h = img.height * ratio;
+    ctx.drawImage(img, (dispW - w) / 2, (dispH - h) / 2, w, h);
+    _sigPadState.hasInk = true;
+    document.getElementById('sig-placeholder').style.display = 'none';
+  };
+  img.src = profile.signature;
+  if (profile.name && !document.getElementById('sig-signer-name').value.trim()) {
+    document.getElementById('sig-signer-name').value = profile.name;
+  }
+}
+
+function _sigPointerPos(ev) {
+  const canvas = _sigPadState.canvas;
+  const rect = canvas.getBoundingClientRect();
+  const cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+  const cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - rect.top;
+  return { x: cx, y: cy };
+}
+
+function _sigStart(ev) {
+  if (!_sigPadState) return;
+  ev.preventDefault();
+  _sigPadState.drawing = true;
+  const p = _sigPointerPos(ev);
+  const { ctx } = _sigPadState;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  _sigPadState.hasInk = true;
+  document.getElementById('sig-placeholder').style.display = 'none';
+}
+
+function _sigMove(ev) {
+  if (!_sigPadState || !_sigPadState.drawing) return;
+  ev.preventDefault();
+  const p = _sigPointerPos(ev);
+  const { ctx } = _sigPadState;
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+}
+
+function _sigEnd() {
+  if (!_sigPadState) return;
+  _sigPadState.drawing = false;
+}
+
+function _attachSigPadEvents() {
+  if (!_sigPadState) return;
+  const c = _sigPadState.canvas;
+  c.addEventListener('mousedown', _sigStart);
+  c.addEventListener('mousemove', _sigMove);
+  window.addEventListener('mouseup', _sigEnd);
+  c.addEventListener('touchstart', _sigStart, { passive: false });
+  c.addEventListener('touchmove', _sigMove, { passive: false });
+  c.addEventListener('touchend', _sigEnd);
+}
+
+function _detachSigPadEvents() {
+  if (!_sigPadState) return;
+  const c = _sigPadState.canvas;
+  c.removeEventListener('mousedown', _sigStart);
+  c.removeEventListener('mousemove', _sigMove);
+  window.removeEventListener('mouseup', _sigEnd);
+  c.removeEventListener('touchstart', _sigStart);
+  c.removeEventListener('touchmove', _sigMove);
+  c.removeEventListener('touchend', _sigEnd);
+}
+
+async function confirmSignaturePad() {
+  if (!_sigPadState) return;
+  const name = document.getElementById('sig-signer-name').value.trim();
+  if (!name) { alert('Zadajte meno podpisujúceho.'); return; }
+  if (!_sigPadState.hasInk) { alert('Najprv sa podpíšte.'); return; }
+  const dataUrl = _sigPadState.canvas.toDataURL('image/png');
+  const saveToProfile = document.getElementById('sig-save-to-profile').checked;
+  const ctx = _sigPadState.context;
+
+  // Record audit entry
+  const docHash = await sha256Hex((ctx.docPayload || '') + '|' + (ctx.docRef || ''));
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    documentType: ctx.documentType,
+    documentId: ctx.documentId,
+    documentRef: ctx.docRef,
+    signerName: name,
+    signerRole: ctx.signerRole || '',
+    signatureDataUrl: dataUrl,
+    docHash,
+    signedAt: new Date().toISOString(),
+  };
+  const list = getSignatures();
+  list.unshift(entry);
+  saveSignatures(list);
+
+  // Optionally store signature in profile for reuse
+  if (saveToProfile && typeof getProfile === 'function') {
+    const prof = getProfile();
+    prof.signature = dataUrl;
+    prof.updatedAt = new Date().toISOString();
+    if (typeof saveProfileData === 'function') saveProfileData(prof);
+  }
+
+  const onConfirm = _sigPadState.onConfirm;
+  closeSignaturePad(true);
+  _sigPadState = null;
+  try { onConfirm(dataUrl, entry); } catch (e) { console.error(e); }
+  if (typeof showToast === 'function') showToast('Podpis zaznamenaný', 'success');
+}
+
+// ==================== SIGNATURES HISTORY PAGE ====================
+const SIG_DOC_TYPE_LABELS = {
+  profile: { label: 'Profilový podpis', icon: '👤', color: '#7C3AED' },
+  aml: { label: 'AML preverenie', icon: '🛡️', color: '#0891B2' },
+  nabor: { label: 'Náborový list', icon: '📋', color: '#0D9488' },
+  document: { label: 'Dokument', icon: '📄', color: '#2563EB' },
+  protocol: { label: 'Protokol o prehliadke', icon: '🔍', color: '#D97706' },
+  other: { label: 'Iný dokument', icon: '✍️', color: '#64748B' },
+};
+
+function renderSignatures() {
+  const listEl = document.getElementById('sig-list');
+  const emptyEl = document.getElementById('sig-empty');
+  const countEl = document.getElementById('sig-count');
+  if (!listEl) return;
+  const sigs = getSignatures();
+  if (countEl) countEl.textContent = sigs.length + ' ' + (sigs.length === 1 ? 'podpis' : (sigs.length >= 2 && sigs.length <= 4 ? 'podpisy' : 'podpisov'));
+  if (sigs.length === 0) {
+    listEl.innerHTML = '';
+    listEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  listEl.style.display = '';
+  listEl.innerHTML = sigs.map(s => {
+    const meta = SIG_DOC_TYPE_LABELS[s.documentType] || SIG_DOC_TYPE_LABELS.other;
+    const dt = new Date(s.signedAt);
+    const date = dt.toLocaleDateString('sk-SK') + ' ' + dt.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="sig-card">
+        <div class="sig-card-head">
+          <span class="sig-type-chip" style="background:${meta.color}1a;color:${meta.color};">${meta.icon} ${meta.label}</span>
+          <span class="sig-date">${date}</span>
+        </div>
+        <div class="sig-card-body">
+          <div class="sig-meta">
+            <div><span class="sig-label">Podpísal:</span> <b>${esc(s.signerName)}</b>${s.signerRole ? ' <span style="color:var(--text-light);font-size:0.75rem;">(' + esc(s.signerRole) + ')</span>' : ''}</div>
+            ${s.documentRef ? `<div><span class="sig-label">Dokument:</span> ${esc(s.documentRef)}</div>` : ''}
+            ${s.docHash ? `<div class="sig-hash"><span class="sig-label">Hash:</span> <code>${esc(s.docHash.slice(0,16))}…</code></div>` : ''}
+          </div>
+          <img class="sig-img" src="${s.signatureDataUrl}" alt="Podpis" />
+        </div>
+        <div class="sig-card-footer">
+          <button class="sig-btn-view" onclick="viewSignatureEntry('${s.id}')">Zobraziť</button>
+          <button class="sig-btn-delete" onclick="deleteSignatureEntry('${s.id}')">Vymazať</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function viewSignatureEntry(id) {
+  const s = getSignatures().find(x => x.id === id);
+  if (!s) return;
+  const w = window.open('', '_blank', 'width=640,height=520');
+  if (!w) return;
+  const meta = SIG_DOC_TYPE_LABELS[s.documentType] || SIG_DOC_TYPE_LABELS.other;
+  w.document.write(`
+    <html><head><title>Podpis - ${esc(s.signerName)}</title>
+    <style>body{font-family:system-ui,sans-serif;padding:24px;background:#F8FAFC;color:#0B2A3C;} .box{background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-width:580px;margin:auto;} img{max-width:100%;border:1px solid #E2E8F0;border-radius:8px;background:#fff;} h2{margin:0 0 1rem;} .row{margin:0.4rem 0;font-size:0.9rem;} code{background:#F1F5F9;padding:2px 6px;border-radius:4px;font-size:0.8rem;}</style>
+    </head><body><div class="box">
+    <h2>${meta.icon} ${meta.label}</h2>
+    <div class="row"><b>Podpísal:</b> ${esc(s.signerName)}${s.signerRole ? ' (' + esc(s.signerRole) + ')' : ''}</div>
+    <div class="row"><b>Čas podpisu:</b> ${new Date(s.signedAt).toLocaleString('sk-SK')}</div>
+    ${s.documentRef ? `<div class="row"><b>Dokument:</b> ${esc(s.documentRef)}</div>` : ''}
+    ${s.docHash ? `<div class="row"><b>SHA-256 hash:</b> <code>${esc(s.docHash)}</code></div>` : ''}
+    <div class="row" style="margin-top:1rem;"><b>Podpis:</b></div>
+    <img src="${s.signatureDataUrl}" />
+    </div></body></html>
+  `);
+}
+
+async function deleteSignatureEntry(id) {
+  const ok = (typeof secConfirm === 'function')
+    ? await secConfirm({ message: 'Naozaj chcete vymazať tento záznam podpisu? Audit stopa bude stratená.', type: 'danger', ok: 'Vymazať' })
+    : confirm('Vymazať tento podpis?');
+  if (!ok) return;
+  saveSignatures(getSignatures().filter(s => s.id !== id));
+  renderSignatures();
+}
 
