@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Podpis dokumentu – SecPro</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:600px;width:100%;overflow:hidden}
+  .card-header{background:linear-gradient(135deg,#0b2a3c 0%,#1a5276 100%);color:#fff;padding:24px;text-align:center}
+  .card-header h1{font-size:18px;font-weight:600;margin-bottom:4px}
+  .card-header p{font-size:13px;opacity:.8}
+  .card-body{padding:24px}
+  .info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+  .info-row:last-child{border:none}
+  .info-label{color:#666;font-weight:500}
+  .info-value{color:#1a1a2e;font-weight:600;text-align:right}
+  .message-box{background:#f8f9fa;border-left:3px solid #1a5276;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;font-size:13px;color:#444;line-height:1.5}
+  .doc-preview{background:#fafbfc;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin:16px 0;max-height:300px;overflow-y:auto;font-size:13px;line-height:1.6}
+  .sig-section{margin-top:20px;padding-top:20px;border-top:2px solid #f0f0f0}
+  .sig-section h3{font-size:15px;margin-bottom:12px;color:#0b2a3c}
+  .sig-name-input{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px;outline:none;transition:border .2s}
+  .sig-name-input:focus{border-color:#1a5276}
+  .canvas-wrap{position:relative;border:2px dashed #ccc;border-radius:8px;background:#fff;cursor:crosshair;touch-action:none;margin-bottom:8px}
+  .canvas-wrap.has-ink{border-color:#1a5276;border-style:solid}
+  canvas{display:block;width:100%;border-radius:6px}
+  .canvas-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#bbb;font-size:14px;pointer-events:none;text-align:center}
+  .canvas-wrap.has-ink .canvas-placeholder{display:none}
+  .btn-row{display:flex;gap:8px;margin-top:12px}
+  .btn{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+  .btn-clear{background:#f0f0f0;color:#666}
+  .btn-clear:hover{background:#e0e0e0}
+  .btn-sign{background:linear-gradient(135deg,#0b2a3c,#1a5276);color:#fff}
+  .btn-sign:hover{opacity:.9}
+  .btn-sign:disabled{opacity:.5;cursor:not-allowed}
+  .legal-note{font-size:11px;color:#888;margin-top:12px;line-height:1.5;text-align:center}
+  .status-card{text-align:center;padding:48px 24px}
+  .status-icon{font-size:48px;margin-bottom:16px}
+  .status-title{font-size:20px;font-weight:700;margin-bottom:8px}
+  .status-sub{font-size:14px;color:#666;line-height:1.5}
+  .spinner{border:3px solid #f0f0f0;border-top:3px solid #1a5276;border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;margin:0 auto 16px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .logo{font-size:13px;color:#aaa;margin-top:16px;text-align:center}
+  .logo b{color:#0b2a3c}
+  @media(max-width:480px){
+    body{padding:8px}
+    .card-body{padding:16px}
+    .info-row{flex-direction:column;gap:2px}
+    .info-value{text-align:left}
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="main-card">
+  <!-- Loading state -->
+  <div class="status-card" id="state-loading">
+    <div class="spinner"></div>
+    <div class="status-title">Načítavam dokument...</div>
+  </div>
+
+  <!-- Error state -->
+  <div class="status-card" id="state-error" style="display:none">
+    <div class="status-icon">&#10060;</div>
+    <div class="status-title" id="error-title">Chyba</div>
+    <div class="status-sub" id="error-msg"></div>
+  </div>
+
+  <!-- Expired state -->
+  <div class="status-card" id="state-expired" style="display:none">
+    <div class="status-icon">&#9203;</div>
+    <div class="status-title">Platnosť odkazu vypršala</div>
+    <div class="status-sub">Kontaktujte svojho makléra pre nový odkaz na podpis.</div>
+  </div>
+
+  <!-- Already signed state -->
+  <div class="status-card" id="state-signed" style="display:none">
+    <div class="status-icon">&#9989;</div>
+    <div class="status-title">Dokument bol podpísaný</div>
+    <div class="status-sub" id="signed-info"></div>
+  </div>
+
+  <!-- Success state (after signing) -->
+  <div class="status-card" id="state-success" style="display:none">
+    <div class="status-icon">&#9989;</div>
+    <div class="status-title">Podpis bol prijatý!</div>
+    <div class="status-sub">Ďakujeme. Váš maklér dostane potvrdenie o podpise.</div>
+  </div>
+
+  <!-- Signing form -->
+  <div id="state-form" style="display:none">
+    <div class="card-header">
+      <h1 id="form-title">Podpis dokumentu</h1>
+      <p id="form-subtitle"></p>
+    </div>
+    <div class="card-body">
+      <div id="doc-info"></div>
+
+      <div id="agent-message" class="message-box" style="display:none"></div>
+
+      <div id="doc-preview" class="doc-preview" style="display:none"></div>
+
+      <div class="sig-section">
+        <h3>Elektronický podpis</h3>
+        <input type="text" class="sig-name-input" id="signer-name" placeholder="Vaše celé meno">
+        <div class="canvas-wrap" id="canvas-wrap">
+          <canvas id="sig-canvas" height="180"></canvas>
+          <div class="canvas-placeholder">Podpíšte sa tu prstom alebo myšou</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-clear" onclick="clearCanvas()">Vymazať</button>
+          <button class="btn btn-sign" id="btn-submit" onclick="submitSignature()" disabled>Podpísať dokument</button>
+        </div>
+        <div class="legal-note">
+          Kliknutím na "Podpísať dokument" súhlasíte s použitím elektronického podpisu
+          v zmysle §40 ods. 4 Občianskeho zákonníka. Podpis je právne záväzný
+          ako jednoduchý elektronický podpis (SES).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="logo">Zabezpečené cez <b>SecPro</b></div>
+
+<script>
+(function() {
+  const API_BASE = window.location.origin;
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  let docData = null;
+  let hasInk = false;
+  let isDrawing = false;
+  let ctx = null;
+  let lastX = 0, lastY = 0;
+
+  // ── Init ──
+  async function init() {
+    if (!token) return showError('Neplatný odkaz', 'Chýba token v URL adrese.');
+
+    try {
+      const r = await fetch(`${API_BASE}/api/sign/${token}`);
+      const data = await r.json();
+
+      if (!r.ok) return showError('Chyba', data.error || 'Nepodarilo sa načítať dokument.');
+
+      if (data.status === 'expired') return showState('expired');
+      if (data.status === 'signed') {
+        document.getElementById('signed-info').innerHTML =
+          'Podpísal: <b>' + esc(data.signedByName) + '</b><br>Dňa: ' + formatDate(data.signedAt);
+        return showState('signed');
+      }
+
+      // Show signing form
+      docData = data;
+      renderForm(data);
+      showState('form');
+      initCanvas();
+
+    } catch (e) {
+      showError('Chyba pripojenia', 'Nepodarilo sa spojiť so serverom. Skúste to znova.');
+    }
+  }
+
+  function renderForm(d) {
+    document.getElementById('form-title').textContent = d.documentRef || 'Podpis dokumentu';
+    document.getElementById('form-subtitle').textContent =
+      'Od makléra: ' + (d.agentName || 'SecPro');
+
+    let info = '';
+    info += infoRow('Dokument', d.documentRef);
+    if (d.signerRole) info += infoRow('Vaša rola', d.signerRole);
+    info += infoRow('Platnosť do', formatDate(d.expiresAt));
+    document.getElementById('doc-info').innerHTML = info;
+
+    if (d.message) {
+      const msgEl = document.getElementById('agent-message');
+      msgEl.textContent = d.message;
+      msgEl.style.display = 'block';
+    }
+
+    if (d.documentHtml) {
+      const prev = document.getElementById('doc-preview');
+      prev.innerHTML = d.documentHtml;
+      prev.style.display = 'block';
+    }
+
+    document.getElementById('signer-name').value = d.signerName || '';
+  }
+
+  // ── Canvas ──
+  function initCanvas() {
+    const canvas = document.getElementById('sig-canvas');
+    const wrap = document.getElementById('canvas-wrap');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = 180 * dpr;
+    ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#0b2a3c';
+
+    // Fill white
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Mouse events
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+
+    // Touch events
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); startDraw(touchEvent(e)); }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) { e.preventDefault(); draw(touchEvent(e)); }, { passive: false });
+    canvas.addEventListener('touchend', function(e) { endDraw(); }, { passive: false });
+  }
+
+  function touchEvent(e) {
+    const t = e.touches[0];
+    const r = e.target.getBoundingClientRect();
+    return { offsetX: t.clientX - r.left, offsetY: t.clientY - r.top };
+  }
+
+  function startDraw(e) {
+    isDrawing = true;
+    lastX = e.offsetX;
+    lastY = e.offsetY;
+  }
+
+  function draw(e) {
+    if (!isDrawing) return;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    lastX = e.offsetX;
+    lastY = e.offsetY;
+    if (!hasInk) {
+      hasInk = true;
+      document.getElementById('canvas-wrap').classList.add('has-ink');
+      updateSubmitBtn();
+    }
+  }
+
+  function endDraw() { isDrawing = false; }
+
+  window.clearCanvas = function() {
+    const canvas = document.getElementById('sig-canvas');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
+    hasInk = false;
+    document.getElementById('canvas-wrap').classList.remove('has-ink');
+    updateSubmitBtn();
+  };
+
+  function updateSubmitBtn() {
+    const name = document.getElementById('signer-name').value.trim();
+    document.getElementById('btn-submit').disabled = !(hasInk && name.length >= 2);
+  }
+
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'signer-name') updateSubmitBtn();
+  });
+
+  // ── Submit ──
+  window.submitSignature = async function() {
+    const btn = document.getElementById('btn-submit');
+    const name = document.getElementById('signer-name').value.trim();
+    if (!hasInk || name.length < 2) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Odosielam...';
+
+    const canvas = document.getElementById('sig-canvas');
+    const dataUrl = canvas.toDataURL('image/png');
+
+    try {
+      const r = await fetch(`${API_BASE}/api/sign/${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signatureDataUrl: dataUrl, signerName: name }),
+      });
+      const data = await r.json();
+
+      if (data.ok) {
+        showState('success');
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Podpísať dokument';
+        alert(data.error || 'Chyba pri odosielaní podpisu.');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Podpísať dokument';
+      alert('Chyba pripojenia. Skúste to znova.');
+    }
+  };
+
+  // ── Helpers ──
+  function showState(id) {
+    ['loading', 'error', 'expired', 'signed', 'success', 'form'].forEach(s => {
+      const el = document.getElementById('state-' + s);
+      if (el) el.style.display = (s === id) ? '' : 'none';
+    });
+  }
+
+  function showError(title, msg) {
+    document.getElementById('error-title').textContent = title;
+    document.getElementById('error-msg').textContent = msg;
+    showState('error');
+  }
+
+  function infoRow(label, value) {
+    return '<div class="info-row"><span class="info-label">' + esc(label) + '</span><span class="info-value">' + esc(value) + '</span></div>';
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('sk-SK', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

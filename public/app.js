@@ -80,7 +80,7 @@ function showPage(id) {
   if (id === 'ai') renderAiSettingsPage();
   if (id === 'saved-leads') renderSavedLeads();
   if (id === 'dokumenty') renderDocs();
-  if (id === 'signatures' && typeof renderSignatures === 'function') renderSignatures();
+  if (id === 'signatures') { if (typeof refreshRemoteSignatures === 'function') refreshRemoteSignatures(); }
   if (id === 'clients' && typeof renderClients === 'function') renderClients();
   window.scrollTo(0, 0);
 }
@@ -11397,5 +11397,256 @@ async function deleteSignatureEntry(id) {
   if (!ok) return;
   saveSignatures(getSignatures().filter(s => s.id !== id));
   renderSignatures();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REMOTE SIGNATURES — send link to client, track status
+// ═══════════════════════════════════════════════════════════════
+
+const RS_STATUS_LABELS = {
+  pending: { label: 'Čaká na podpis', cls: 'rs-status-pending' },
+  signed:  { label: 'Podpísané',      cls: 'rs-status-signed'  },
+  expired: { label: 'Vypršané',       cls: 'rs-status-expired' },
+};
+
+function switchSigTab(tab) {
+  document.getElementById('sig-tab-remote').classList.toggle('active', tab === 'remote');
+  document.getElementById('sig-tab-local').classList.toggle('active', tab === 'local');
+  document.getElementById('sig-panel-remote').style.display = tab === 'remote' ? '' : 'none';
+  document.getElementById('sig-panel-local').style.display = tab === 'local' ? '' : 'none';
+  if (tab === 'remote') refreshRemoteSignatures();
+  if (tab === 'local') renderSignatures();
+}
+
+let _remoteSignCache = null;
+let _remoteSignLastFetch = 0;
+
+async function refreshRemoteSignatures() {
+  const token = getStoredToken();
+  if (!token) { renderRemoteSignatures([]); return; }
+
+  // Cache for 15 seconds to avoid spamming
+  const now = Date.now();
+  if (_remoteSignCache && (now - _remoteSignLastFetch) < 15000) {
+    renderRemoteSignatures(_remoteSignCache);
+    return;
+  }
+
+  try {
+    const r = await secureFetch('/api/sign/list', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    if (!r.ok) { renderRemoteSignatures([]); return; }
+    const data = await r.json();
+    _remoteSignCache = data.items || [];
+    _remoteSignLastFetch = now;
+    renderRemoteSignatures(_remoteSignCache);
+  } catch (e) {
+    console.warn('[SecPro] Failed to fetch remote signatures:', e);
+    renderRemoteSignatures(_remoteSignCache || []);
+  }
+}
+
+function renderRemoteSignatures(items) {
+  const listEl = document.getElementById('remote-sig-list');
+  const emptyEl = document.getElementById('remote-sig-empty');
+  const countEl = document.getElementById('remote-sig-count');
+  if (!listEl) return;
+
+  if (!items || items.length === 0) {
+    listEl.innerHTML = '';
+    listEl.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    if (countEl) countEl.textContent = '0 žiadostí';
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+  listEl.style.display = '';
+  if (countEl) {
+    const n = items.length;
+    countEl.textContent = n + ' ' + (n === 1 ? 'žiadosť' : (n >= 2 && n <= 4 ? 'žiadosti' : 'žiadostí'));
+  }
+
+  const host = window.location.origin;
+  listEl.innerHTML = items.map(item => {
+    const st = RS_STATUS_LABELS[item.status] || RS_STATUS_LABELS.pending;
+    const created = new Date(item.createdAt);
+    const dateStr = created.toLocaleDateString('sk-SK') + ' ' + created.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+    const signUrl = host + '/sign.html?token=' + item.token;
+    const signedRow = item.signedAt
+      ? `<div style="margin-top:4px;font-size:0.75rem;color:#065F46;">Podpísané: ${new Date(item.signedAt).toLocaleString('sk-SK')}</div>`
+      : '';
+    const linkRow = item.status === 'pending'
+      ? `<div class="rs-link-row"><input value="${esc(signUrl)}" readonly onclick="this.select()"><button onclick="copyText('${esc(signUrl)}')">Kopírovať</button></div>`
+      : '';
+
+    return `
+      <div class="sig-card">
+        <div class="sig-card-head">
+          <span class="rs-status ${st.cls}">${st.label}</span>
+          <span class="sig-date">${dateStr}</span>
+        </div>
+        <div class="sig-card-body">
+          <div class="sig-meta">
+            <div><span class="sig-label">Dokument:</span> <b>${esc(item.documentRef)}</b></div>
+            <div><span class="sig-label">Podpisujúci:</span> ${esc(item.signerName)}</div>
+            ${signedRow}
+          </div>
+        </div>
+        <div class="sig-card-footer">
+          ${item.status === 'signed' ? `<button class="sig-btn-view" onclick="viewRemoteSignature('${item.token}')">Zobraziť podpis</button>` : ''}
+          ${item.status === 'pending' ? `<button class="sig-btn-view" onclick="copyText('${esc(signUrl)}')">Kopírovať link</button>` : ''}
+          ${linkRow}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Link skopírovaný do schránky!', 'success');
+  }).catch(() => {
+    // Fallback
+    const inp = document.createElement('input');
+    inp.value = text;
+    document.body.appendChild(inp);
+    inp.select();
+    document.execCommand('copy');
+    document.body.removeChild(inp);
+    showToast('Link skopírovaný!', 'success');
+  });
+}
+
+async function viewRemoteSignature(token) {
+  const sessionToken = getStoredToken();
+  if (!sessionToken) return;
+  try {
+    const r = await secureFetch('/api/sign/list?detail=' + token, {
+      headers: { 'Authorization': 'Bearer ' + sessionToken },
+    });
+    if (!r.ok) { showToast('Nepodarilo sa načítať podpis', 'error'); return; }
+    const data = await r.json();
+    const rec = data.record;
+    if (!rec) return;
+
+    const w = window.open('', '_blank', 'width=640,height=560');
+    if (!w) return;
+    w.document.write(`<html><head><title>Vzdialený podpis - ${esc(rec.signedByName || rec.signerName)}</title>
+      <style>body{font-family:system-ui,sans-serif;padding:24px;background:#F8FAFC;color:#0B2A3C;}
+      .box{background:#fff;border-radius:12px;padding:24px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-width:580px;margin:auto;}
+      img{max-width:100%;border:1px solid #E2E8F0;border-radius:8px;background:#fff;}
+      h2{margin:0 0 1rem;} .row{margin:0.4rem 0;font-size:0.9rem;}</style>
+    </head><body><div class="box">
+      <h2>Vzdialený podpis</h2>
+      <div class="row"><b>Dokument:</b> ${esc(rec.documentRef)}</div>
+      <div class="row"><b>Podpísal:</b> ${esc(rec.signedByName || rec.signerName)}${rec.signerRole ? ' (' + esc(rec.signerRole) + ')' : ''}</div>
+      <div class="row"><b>Čas podpisu:</b> ${rec.signedAt ? new Date(rec.signedAt).toLocaleString('sk-SK') : '—'}</div>
+      <div class="row"><b>IP adresa:</b> ${esc(rec.signedByIp || '—')}</div>
+      <div class="row"><b>Stav:</b> ${esc(rec.status)}</div>
+      ${rec.signatureDataUrl ? '<div class="row" style="margin-top:1rem;"><b>Podpis:</b></div><img src="' + rec.signatureDataUrl + '" />' : ''}
+    </div></body></html>`);
+  } catch (e) {
+    showToast('Chyba pri načítaní', 'error');
+  }
+}
+
+// ── Remote sign request modal ──
+function openRemoteSignModal(presets) {
+  const p = presets || {};
+  document.getElementById('rs-doc-type').value = p.documentType || 'nabor';
+  document.getElementById('rs-doc-ref').value = p.documentRef || '';
+  document.getElementById('rs-signer-name').value = p.signerName || '';
+  document.getElementById('rs-signer-role').value = p.signerRole || '';
+  document.getElementById('rs-signer-email').value = p.signerEmail || '';
+  document.getElementById('rs-signer-phone').value = p.signerPhone || '';
+  document.getElementById('rs-message').value = p.message || '';
+  document.getElementById('rs-expires').value = p.expiresInHours || '48';
+  document.getElementById('rs-submit-btn').disabled = false;
+  document.getElementById('rs-submit-btn').textContent = 'Vytvoriť a získať link';
+  document.getElementById('remote-sign-modal').style.display = 'block';
+}
+
+function closeRemoteSignModal() {
+  document.getElementById('remote-sign-modal').style.display = 'none';
+}
+
+async function submitRemoteSignRequest() {
+  const btn = document.getElementById('rs-submit-btn');
+  const docType = document.getElementById('rs-doc-type').value;
+  const docRef = document.getElementById('rs-doc-ref').value.trim();
+  const signerName = document.getElementById('rs-signer-name').value.trim();
+  const signerRole = document.getElementById('rs-signer-role').value.trim();
+  const signerEmail = document.getElementById('rs-signer-email').value.trim();
+  const signerPhone = document.getElementById('rs-signer-phone').value.trim();
+  const message = document.getElementById('rs-message').value.trim();
+  const expiresInHours = parseInt(document.getElementById('rs-expires').value);
+
+  if (!docRef || !signerName) {
+    showToast('Vyplňte referenciu dokumentu a meno podpisujúceho', 'warning');
+    return;
+  }
+
+  const token = getStoredToken();
+  if (!token) { showToast('Nie ste prihlásený', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Vytváram...';
+
+  try {
+    const r = await secureFetch('/api/sign/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ documentType: docType, documentRef: docRef, signerName, signerRole, signerEmail, signerPhone, message, expiresInHours }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      closeRemoteSignModal();
+      // Show link modal
+      document.getElementById('rs-link-url').value = data.signUrl;
+      document.getElementById('rs-link-expires').textContent = 'Platnosť do: ' + new Date(data.expiresAt).toLocaleString('sk-SK');
+      document.getElementById('remote-sign-link-modal').style.display = 'block';
+      // Invalidate cache
+      _remoteSignCache = null;
+      refreshRemoteSignatures();
+    } else {
+      showToast(data.error || 'Chyba pri vytváraní žiadosti', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Vytvoriť a získať link';
+    }
+  } catch (e) {
+    showToast('Chyba pripojenia k serveru', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Vytvoriť a získať link';
+  }
+}
+
+function copyRemoteSignLink() {
+  const url = document.getElementById('rs-link-url').value;
+  copyText(url);
+  const btn = document.getElementById('rs-copy-btn');
+  btn.textContent = 'Skopírované!';
+  setTimeout(() => { btn.textContent = 'Kopírovať link'; }, 2000);
+}
+
+function closeRemoteSignLinkModal() {
+  document.getElementById('remote-sign-link-modal').style.display = 'none';
+}
+
+// ── Quick send from Náborák ──
+function sendNaborForRemoteSign(role) {
+  const vlastnik = document.getElementById('nb-vlastnik')?.value?.trim() || '';
+  const address = (document.getElementById('nb-ulica')?.value || '').trim()
+    + (document.getElementById('nb-mesto')?.value ? ', ' + document.getElementById('nb-mesto').value.trim() : '');
+  const docRef = 'Náborový list' + (address ? ' – ' + address : '');
+
+  openRemoteSignModal({
+    documentType: 'nabor',
+    documentRef: docRef,
+    signerName: role === 'seller' ? vlastnik : (getProfile()?.name || ''),
+    signerRole: role === 'seller' ? 'Predávajúci' : 'Maklér',
+    message: 'Prosím podpíšte náborový list pre nehnuteľnosť: ' + (address || docRef),
+  });
 }
 

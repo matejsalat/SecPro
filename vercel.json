@@ -34,6 +34,10 @@
     "api/*.js": {
       "maxDuration": 30,
       "includeFiles": "lib/**"
+    },
+    "api/sign/*.js": {
+      "maxDuration": 15,
+      "includeFiles": "lib/**"
     }
   }
 }
