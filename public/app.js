@@ -2907,12 +2907,37 @@ function renderLeadCards(leads) {
       dupBadge = '<span class="sec-tooltip-wrap"><span class="lc-dup-badge" onclick="toggleDupPanel(\'' + hash + '\')">Podobn\u00E9 ' + dups.length + 'x</span><span class="sec-tooltip">' + esc(dupReasons) + '</span></span>';
     }
 
-    // ── Card HTML v2 ──
+    // Clean location — reject junk values from broken scrapers (query strings, etc.)
+    var cleanLoc = '';
+    if (lead.location && typeof lead.location === 'string') {
+      var l = lead.location.trim();
+      // Reject if contains URL-encoding artifacts
+      if (l && !/[=?&]/.test(l) && l.length >= 2 && l.length <= 80) {
+        cleanLoc = l;
+      }
+    }
+    var locHtml = cleanLoc ? (isRealAddress(cleanLoc)
+      ? '<a href="https://www.google.com/maps/search/' + encodeURIComponent(cleanLoc + ', Slovensko') + '" target="_blank" rel="noopener" class="lc2-loc" title="Otvoriť v Google Maps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(cleanLoc) + '</a>'
+      : '<span class="lc2-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(cleanLoc) + '</span>')
+      : '';
+
+    // Build meta pieces with bullet separators
+    var metaPieces = [];
+    if (locHtml) metaPieces.push(locHtml);
+    if (lead.size) metaPieces.push('<span class="lc2-size">' + lead.size + ' m\u00B2</span>');
+    var pricePerM = lead.price && lead.size ? Math.round(lead.price / lead.size) : null;
+    if (pricePerM) metaPieces.push('<span class="lc2-ppm">' + pricePerM.toLocaleString('sk-SK') + ' \u20AC/m\u00B2</span>');
+    var metaHtml = metaPieces.join('<span class="lc2-sep">\u00B7</span>');
+
+    // ── Card HTML v3 ──
     html += '<div class="lc2' + (isHidden ? ' lc-hidden' : '') + (alreadySaved ? ' lc2-saved' : '') + '" id="lcard-' + hash + '">'
-      // ── Top bar: source + badges + dismiss ──
+      // ── Top bar: source link + badges + dismiss ──
       + '<div class="lc2-topbar">'
         + '<div class="lc2-badges">'
-          + '<span class="lc2-source">' + esc(lead.source) + '</span>'
+          + '<a href="' + esc(lead.url) + '" target="_blank" rel="noopener" class="lc2-source" title="Otvori\u0165 inzer\u00E1t na ' + esc(lead.source) + '">'
+            + esc(lead.source)
+            + '<svg class="lc2-source-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/></svg>'
+          + '</a>'
           + marketBadge
           + dupBadge
           + statusHtml
@@ -2923,35 +2948,25 @@ function renderLeadCards(leads) {
       + '</div>'
       // ── Main content ──
       + '<div class="lc2-main">'
-        + (lead.imageUrl ? '<img class="lc2-thumb" src="' + esc(lead.imageUrl) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '')
-        // Left: info
+        + (lead.imageUrl
+            ? '<img class="lc2-thumb" src="' + esc(lead.imageUrl) + '" alt="" loading="lazy" onerror="this.parentNode.classList.add(\'lc2-no-img\');this.remove();">'
+            : '<div class="lc2-thumb lc2-thumb-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>')
         + '<div class="lc2-info">'
           + '<div class="lc2-title" title="' + esc(lead.title) + '">' + esc(lead.title || 'Bez n\u00E1zvu') + '</div>'
-          + '<div class="lc2-meta">'
-            + (lead.location ? (isRealAddress(lead.location)
-                ? '<a href="https://www.google.com/maps/search/' + encodeURIComponent(lead.location + ', Slovensko') + '" target="_blank" rel="noopener" class="lc2-loc" title="Otvoriť v Google Maps">📍 ' + esc(lead.location) + '</a>'
-                : '<span class="lc2-loc">📍 ' + esc(lead.location) + '</span>')
-              : '')
-            + (lead.size ? '<span class="lc2-size">' + lead.size + ' m\u00B2</span>' : '')
-          + '</div>'
+          + (metaHtml ? '<div class="lc2-meta">' + metaHtml + '</div>' : '')
         + '</div>'
-        // Right: price block
         + '<div class="lc2-price-block">'
           + '<div class="lc2-price">' + esc(lead.priceText || 'Dohodou') + '</div>'
-          + ppmHtml
         + '</div>'
       + '</div>'
       // ── Action bar ──
       + '<div class="lc2-actions">'
         + phoneBtn
-        + '<a href="' + esc(lead.url) + '" target="_blank" rel="noopener" class="lc2-open" title="Otvori\u0165 na ' + esc(lead.source) + '">'
-          + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
-          + esc(lead.source) + '</a>'
         + '<select class="lc2-status-select" onchange="setSearchLeadStatus(\'' + escUrl + '\', this.value)">'
           + '<option value="">Status...</option>' + statusOpts + '</select>'
         + (alreadySaved
-          ? '<button class="lc2-saved-tag" onclick="unsaveLead(\'' + escUrl + '\');reRenderLeadCards();" title="Zru\u0161i\u0165 ulo\u017Eenie">\u2713</button>'
-          : '<button class="lc2-save" onclick="saveLead(leadsData.find(l=>l.url===\'' + escUrl + '\'));reRenderLeadCards();" title="Ulo\u017Ei\u0165 do leadov">+</button>')
+          ? '<button class="lc2-saved-tag" onclick="unsaveLead(\'' + escUrl + '\');reRenderLeadCards();" title="Zru\u0161i\u0165 ulo\u017Eenie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>'
+          : '<button class="lc2-save" onclick="saveLead(leadsData.find(l=>l.url===\'' + escUrl + '\'));reRenderLeadCards();" title="Ulo\u017Ei\u0165 do leadov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>')
       + '</div>'
       // ── Expandable: note + history + duplicates ──
       + '<div class="lc2-expand">'
