@@ -3832,62 +3832,59 @@
 
           <!-- ============== STEP 2: FOTKY A POPIS ============== -->
           <div class="wiz-panel" data-step="2">
-            <div class="form-grid" style="grid-template-columns:3fr 2fr;gap:1.5rem;">
-              <!-- Left column: Description + AI -->
-              <div>
-                <div class="wiz-section-title">📝 Popis a titulok inzerátu</div>
-                <div class="form-group">
-                  <label>Popis nehnuteľnosti</label>
-                  <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateDescription()">
-                      <span id="ai-gen-text">✨ Generovať s AI</span>
-                      <span id="ai-gen-spinner" style="display:none;">⏳ Generujem...</span>
-                    </button>
-                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#E5F5F1;color:#0B2A3C;" onclick="templateDescription()">
-                      📝 Použiť šablónu
-                    </button>
-                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#FFF7ED;color:#D97706;" onclick="openSampleAds()">
-                      📚 Vzorové inzeráty
-                    </button>
-                  </div>
-                  <textarea id="prop-description" rows="8" placeholder="Detailný popis nehnuteľnosti... (použite AI generovanie alebo šablónu)"></textarea>
-                  <div id="ai-gen-error" style="display:none;font-size:0.78rem;color:#DC2626;margin-top:0.3rem;"></div>
-                </div>
-                <div class="form-group">
-                  <label>Titulok inzerátu (AI)</label>
-                  <div style="display:flex;gap:0.5rem;align-items:center;">
-                    <input type="text" id="prop-ai-headline" placeholder="AI vygeneruje chytľavý titulok..." style="flex:1;" />
-                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateHeadline()">✨ Titulok</button>
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label>Interné poznámky</label>
-                  <textarea id="prop-notes" rows="2" placeholder="Vlastné poznámky (len pre vás)..."></textarea>
-                </div>
-                <div class="form-group">
-                  <label>🔗 URL odkaz na inzerát (voliteľné)</label>
-                  <input type="url" id="prop-url" placeholder="https://..." />
-                </div>
+            <!-- Fotografie — full width on top -->
+            <div class="wiz-section-title">📷 Fotografie</div>
+            <div class="pm-wrap">
+              <label class="pm-dropzone" id="pm-dropzone" for="prop-photos">
+                <div class="pm-dropzone-icon">📸</div>
+                <div class="pm-dropzone-text">Kliknite, pretiahnite alebo vložte (Ctrl+V) fotky</div>
+                <div class="pm-dropzone-sub">JPG / PNG / WebP &middot; max 10 fotiek &middot; automatická kompresia</div>
+                <input type="file" id="prop-photos" accept="image/*" multiple onchange="pmHandleFileInput(event)" />
+              </label>
+
+              <div class="pm-header">
+                <div class="pm-count" id="pm-count">0 / 10 fotiek</div>
+                <div class="pm-hint">💡 Prvá fotka (zlatý rámček) je titulná. Pretiahnite pre zmenu poradia.</div>
               </div>
 
-              <!-- Right column: Photos -->
-              <div>
-                <div class="wiz-section-title">📷 Fotografie</div>
-                <div class="pm-wrap">
-                  <label class="pm-dropzone" id="pm-dropzone" for="prop-photos">
-                    <div class="pm-dropzone-icon">📸</div>
-                    <div class="pm-dropzone-text">Kliknite, pretiahnite alebo vložte (Ctrl+V) fotky</div>
-                    <div class="pm-dropzone-sub">JPG / PNG / WebP &middot; max 10 fotiek</div>
-                    <input type="file" id="prop-photos" accept="image/*" multiple onchange="pmHandleFileInput(event)" />
-                  </label>
+              <div class="pm-grid" id="prop-photo-preview"></div>
+            </div>
 
-                  <div class="pm-header">
-                    <div class="pm-count" id="pm-count">0 / 10 fotiek</div>
-                    <div class="pm-hint">💡 Prvá fotka je titulná. Pretiahnite pre zmenu poradia.</div>
-                  </div>
+            <!-- Popis -->
+            <div class="wiz-section-title">📝 Popis inzerátu</div>
+            <div class="form-group">
+              <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateDescription()">
+                  <span id="ai-gen-text">✨ Generovať s AI</span>
+                  <span id="ai-gen-spinner" style="display:none;">⏳ Generujem...</span>
+                </button>
+                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#E5F5F1;color:#0B2A3C;" onclick="templateDescription()">
+                  📝 Použiť šablónu
+                </button>
+                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#FFF7ED;color:#D97706;" onclick="openSampleAds()">
+                  📚 Vzorové inzeráty
+                </button>
+              </div>
+              <textarea id="prop-description" rows="6" placeholder="Detailný popis nehnuteľnosti... (použite AI generovanie alebo šablónu)"></textarea>
+              <div id="ai-gen-error" style="display:none;font-size:0.78rem;color:#DC2626;margin-top:0.3rem;"></div>
+            </div>
 
-                  <div class="pm-grid" id="prop-photo-preview"></div>
+            <!-- Titulok + poznámky + URL v jednom rade -->
+            <div class="form-grid" style="grid-template-columns:2fr 2fr 1fr;">
+              <div class="form-group">
+                <label>Titulok inzerátu (AI)</label>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                  <input type="text" id="prop-ai-headline" placeholder="AI vygeneruje titulok..." style="flex:1;min-width:0;" />
+                  <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;white-space:nowrap;" onclick="aiGenerateHeadline()">✨ Titulok</button>
                 </div>
+              </div>
+              <div class="form-group">
+                <label>Interné poznámky</label>
+                <input type="text" id="prop-notes" placeholder="Vlastné poznámky (len pre vás)..." />
+              </div>
+              <div class="form-group">
+                <label>URL (voliteľné)</label>
+                <input type="url" id="prop-url" placeholder="https://..." />
               </div>
             </div>
           </div>

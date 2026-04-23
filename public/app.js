@@ -3590,6 +3590,11 @@ function goToWizStep(step) {
   document.getElementById('wiz-btn-save-draft').style.display = 'none';
   // Render listing preview when entering the last step
   if (step === PROP_WIZ_TOTAL_STEPS) renderListingPreview();
+  // Show "Záujemcovia a prehliadky" section only on step 1 in edit mode
+  const extras = document.getElementById('prop-extras-section');
+  if (extras) {
+    extras.style.display = (prop_wiz_is_edit && step === 1) ? '' : 'none';
+  }
   // Scroll modal to top
   const modal = document.getElementById('prop-modal');
   if (modal) modal.scrollTop = 0;
