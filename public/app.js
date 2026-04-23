@@ -3698,11 +3698,61 @@ function openPropertyForm(editId) {
   if (typeof _pmInitSortable === 'function') _pmInitSortable();
   if (typeof pmSetupDropzone === 'function') pmSetupDropzone();
   if (typeof pmSetupPaste === 'function') pmSetupPaste();
+
+  // Snapshot initial state for dirty-check on close
+  _propFormCaptureInitial();
 }
 
-function closePropertyForm() {
+let _propFormInitialSnapshot = null;
+
+// Build a fast fingerprint of the form state for dirty-checking.
+// Uses just the first 50 chars of each photo src to avoid megabyte-sized diffs.
+function _propFormSnapshot() {
+  const v = _propFormReadValues();
+  const photos = Array.isArray(v.photos) ? v.photos : [];
+  const cats = Array.isArray(v.photoCategories) ? v.photoCategories : [];
+  const photosFp = photos.map((s, i) => (s || '').slice(0, 50) + '|' + (cats[i] || '')).join(';');
+  delete v.photos;
+  delete v.photoCategories;
+  return JSON.stringify({
+    v,
+    photosFp,
+    interested: (typeof tempInterested !== 'undefined' && tempInterested) ? tempInterested : [],
+    viewings:   (typeof tempViewings   !== 'undefined' && tempViewings)   ? tempViewings   : [],
+  });
+}
+
+function _propFormCaptureInitial() {
+  try { _propFormInitialSnapshot = _propFormSnapshot(); }
+  catch (e) { _propFormInitialSnapshot = null; }
+}
+
+function _propFormIsDirty() {
+  if (_propFormInitialSnapshot === null) return false;
+  try { return _propFormSnapshot() !== _propFormInitialSnapshot; }
+  catch (e) { return false; }
+}
+
+// Silent close — used after successful save and for programmatic close
+function _closePropertyFormNow() {
   document.getElementById('prop-modal').style.display = 'none';
   if (prop_wiz_draft_timer) { clearTimeout(prop_wiz_draft_timer); prop_wiz_draft_timer = null; }
+  _propFormInitialSnapshot = null;
+}
+
+// Public close — asks for confirmation if there are unsaved changes
+async function closePropertyForm() {
+  if (_propFormIsDirty()) {
+    const ok = await secConfirm({
+      title: 'Neuložené zmeny',
+      message: 'V inzeráte máte neuložené zmeny. Naozaj ich chcete zahodiť?',
+      type: 'warning',
+      ok: 'Zahodiť zmeny',
+      cancel: 'Pokračovať v úpravách',
+    });
+    if (!ok) return;
+  }
+  _closePropertyFormNow();
 }
 
 function compressImage(file, maxWidth, quality) {
@@ -5431,7 +5481,7 @@ async function saveProperty() {
   }
   // Clear wizard draft on successful save
   _propDraftClear();
-  closePropertyForm();
+  _closePropertyFormNow();
   renderProperties();
   // If already published on LEONES, re-sync updated data (without replacing photos)
   if (prop.leonisPublished) {
