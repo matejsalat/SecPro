@@ -3197,7 +3197,7 @@ const PROP_CONDITION_MAP = {
 };
 
 // ===================== PROPERTY FORM WIZARD =====================
-const PROP_WIZ_TOTAL_STEPS = 5;
+const PROP_WIZ_TOTAL_STEPS = 3;
 const PROP_DRAFT_KEY = 'prop-form-draft';
 let prop_preview_portal = 'topreality';
 const PROP_PORTAL_LIMITS = {
@@ -3588,8 +3588,8 @@ function goToWizStep(step) {
   document.getElementById('wiz-btn-save-final').style.display = '';
   // Hide the separate "save draft" button — it did the same as save-final and was confusing
   document.getElementById('wiz-btn-save-draft').style.display = 'none';
-  // Render listing preview when entering step 5
-  if (step === 5) renderListingPreview();
+  // Render listing preview when entering the last step
+  if (step === PROP_WIZ_TOTAL_STEPS) renderListingPreview();
   // Scroll modal to top
   const modal = document.getElementById('prop-modal');
   if (modal) modal.scrollTop = 0;

@@ -3689,7 +3689,7 @@
 
     <!-- PROPERTY FORM MODAL -->
     <div id="prop-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);overflow-y:auto;padding:2rem;">
-      <div style="max-width:720px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <!-- Modal header -->
         <div style="background:var(--dark);color:#fff;padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;">
           <h3 id="prop-modal-title" style="margin:0;font-size:1.15rem;">Pridať nehnuteľnosť</h3>
@@ -3715,31 +3715,23 @@
           <div class="wiz-stepper" id="prop-wiz-stepper">
             <div class="wiz-step active" data-step="1" onclick="goToWizStep(1)">
               <div class="wiz-step-circle"><span class="wiz-step-num">1</span></div>
-              <div class="wiz-step-label">Základ</div>
+              <div class="wiz-step-label">Údaje</div>
             </div>
             <div class="wiz-step disabled" data-step="2" onclick="goToWizStep(2)">
               <div class="wiz-step-circle"><span class="wiz-step-num">2</span></div>
-              <div class="wiz-step-label">Detail</div>
+              <div class="wiz-step-label">Fotky a popis</div>
             </div>
             <div class="wiz-step disabled" data-step="3" onclick="goToWizStep(3)">
               <div class="wiz-step-circle"><span class="wiz-step-num">3</span></div>
-              <div class="wiz-step-label">Fotky</div>
-            </div>
-            <div class="wiz-step disabled" data-step="4" onclick="goToWizStep(4)">
-              <div class="wiz-step-circle"><span class="wiz-step-num">4</span></div>
-              <div class="wiz-step-label">Popis &amp; AI</div>
-            </div>
-            <div class="wiz-step disabled" data-step="5" onclick="goToWizStep(5)">
-              <div class="wiz-step-circle"><span class="wiz-step-num">5</span></div>
               <div class="wiz-step-label">Náhľad</div>
             </div>
           </div>
 
-          <!-- ============== STEP 1: ZÁKLAD (rýchly záznam) ============== -->
+          <!-- ============== STEP 1: ÚDAJE (all form fields) ============== -->
           <div class="wiz-panel active" data-step="1">
-            <div class="wiz-section-title">📋 Rýchly záznam — povinné minimum</div>
-            <div class="wiz-required-hint">Vyplňte len 4 polia a môžete uložiť ako koncept. Detaily doplníte neskôr.</div>
-            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="wiz-section-title">📋 Základné údaje — povinné minimum</div>
+            <div class="wiz-required-hint">Polia označené * sú potrebné na uloženie. Ostatné môžete doplniť neskôr.</div>
+            <div class="form-grid" style="grid-template-columns:repeat(3, 1fr);">
               <div class="form-group" style="grid-column:1/-1;">
                 <label>Názov / Titulok inzerátu *</label>
                 <input type="text" id="prop-title" placeholder="napr. 3-izbový byt v centre Bratislavy" />
@@ -3759,29 +3751,6 @@
                 <input type="number" id="prop-price" placeholder="125 000" />
               </div>
               <div class="form-group">
-                <label>Telefón vlastníka *</label>
-                <input type="tel" id="prop-phone" placeholder="+421 9XX XXX XXX" />
-              </div>
-              <div class="form-group">
-                <label>Mesto / Obec *</label>
-                <input type="text" id="prop-city" placeholder="napr. Bratislava" />
-              </div>
-            </div>
-          </div>
-
-          <!-- ============== STEP 2: DETAIL ============== -->
-          <div class="wiz-panel" data-step="2">
-            <div class="wiz-section-title">📍 Lokalita</div>
-            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
-              <div class="form-group" style="grid-column:1/-1;">
-                <label>Adresa</label>
-                <input type="text" id="prop-address" placeholder="Ulica a číslo" />
-              </div>
-              <div class="form-group">
-                <label>Okres / Kraj</label>
-                <input type="text" id="prop-district" placeholder="napr. Bratislava III" />
-              </div>
-              <div class="form-group">
                 <label>Status</label>
                 <select id="prop-status">
                   <option value="novy">📋 Nový lead</option>
@@ -3797,8 +3766,24 @@
               </div>
             </div>
 
+            <div class="wiz-section-title">📍 Lokalita</div>
+            <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr;">
+              <div class="form-group">
+                <label>Adresa</label>
+                <input type="text" id="prop-address" placeholder="Ulica a číslo" />
+              </div>
+              <div class="form-group">
+                <label>Mesto / Obec *</label>
+                <input type="text" id="prop-city" placeholder="napr. Bratislava" />
+              </div>
+              <div class="form-group">
+                <label>Okres / Kraj</label>
+                <input type="text" id="prop-district" placeholder="napr. Bratislava III" />
+              </div>
+            </div>
+
             <div class="wiz-section-title">📐 Parametre</div>
-            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="form-grid" style="grid-template-columns:repeat(5, 1fr);">
               <div class="form-group">
                 <label>Výmera (m²)</label>
                 <input type="number" id="prop-size" placeholder="68" />
@@ -3815,7 +3800,7 @@
                 <label>Rok výstavby</label>
                 <input type="number" id="prop-year" placeholder="2005" />
               </div>
-              <div class="form-group" style="grid-column:span 2;">
+              <div class="form-group">
                 <label>Stav</label>
                 <select id="prop-condition">
                   <option value="">-- vybrať --</option>
@@ -3829,10 +3814,14 @@
             </div>
 
             <div class="wiz-section-title">📞 Kontakt na vlastníka</div>
-            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
               <div class="form-group">
                 <label>Meno vlastníka</label>
                 <input type="text" id="prop-owner" placeholder="Ján Novák" />
+              </div>
+              <div class="form-group">
+                <label>Telefón *</label>
+                <input type="tel" id="prop-phone" placeholder="+421 9XX XXX XXX" />
               </div>
               <div class="form-group">
                 <label>Email</label>
@@ -3841,70 +3830,70 @@
             </div>
           </div>
 
-          <!-- ============== STEP 3: FOTKY ============== -->
+          <!-- ============== STEP 2: FOTKY A POPIS ============== -->
+          <div class="wiz-panel" data-step="2">
+            <div class="form-grid" style="grid-template-columns:3fr 2fr;gap:1.5rem;">
+              <!-- Left column: Description + AI -->
+              <div>
+                <div class="wiz-section-title">📝 Popis a titulok inzerátu</div>
+                <div class="form-group">
+                  <label>Popis nehnuteľnosti</label>
+                  <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateDescription()">
+                      <span id="ai-gen-text">✨ Generovať s AI</span>
+                      <span id="ai-gen-spinner" style="display:none;">⏳ Generujem...</span>
+                    </button>
+                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#E5F5F1;color:#0B2A3C;" onclick="templateDescription()">
+                      📝 Použiť šablónu
+                    </button>
+                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#FFF7ED;color:#D97706;" onclick="openSampleAds()">
+                      📚 Vzorové inzeráty
+                    </button>
+                  </div>
+                  <textarea id="prop-description" rows="8" placeholder="Detailný popis nehnuteľnosti... (použite AI generovanie alebo šablónu)"></textarea>
+                  <div id="ai-gen-error" style="display:none;font-size:0.78rem;color:#DC2626;margin-top:0.3rem;"></div>
+                </div>
+                <div class="form-group">
+                  <label>Titulok inzerátu (AI)</label>
+                  <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <input type="text" id="prop-ai-headline" placeholder="AI vygeneruje chytľavý titulok..." style="flex:1;" />
+                    <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateHeadline()">✨ Titulok</button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Interné poznámky</label>
+                  <textarea id="prop-notes" rows="2" placeholder="Vlastné poznámky (len pre vás)..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label>🔗 URL odkaz na inzerát (voliteľné)</label>
+                  <input type="url" id="prop-url" placeholder="https://..." />
+                </div>
+              </div>
+
+              <!-- Right column: Photos -->
+              <div>
+                <div class="wiz-section-title">📷 Fotografie</div>
+                <div class="pm-wrap">
+                  <label class="pm-dropzone" id="pm-dropzone" for="prop-photos">
+                    <div class="pm-dropzone-icon">📸</div>
+                    <div class="pm-dropzone-text">Kliknite, pretiahnite alebo vložte (Ctrl+V) fotky</div>
+                    <div class="pm-dropzone-sub">JPG / PNG / WebP &middot; max 10 fotiek</div>
+                    <input type="file" id="prop-photos" accept="image/*" multiple onchange="pmHandleFileInput(event)" />
+                  </label>
+
+                  <div class="pm-header">
+                    <div class="pm-count" id="pm-count">0 / 10 fotiek</div>
+                    <div class="pm-hint">💡 Prvá fotka je titulná. Pretiahnite pre zmenu poradia.</div>
+                  </div>
+
+                  <div class="pm-grid" id="prop-photo-preview"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============== STEP 3: NÁHĽAD INZERÁTU ============== -->
           <div class="wiz-panel" data-step="3">
-            <div class="wiz-section-title">📷 Fotografie</div>
-            <div class="pm-wrap">
-              <!-- Drop zone (click, drag&drop, paste) -->
-              <label class="pm-dropzone" id="pm-dropzone" for="prop-photos">
-                <div class="pm-dropzone-icon">📸</div>
-                <div class="pm-dropzone-text">Kliknite, pretiahnite alebo vložte (Ctrl+V) fotky</div>
-                <div class="pm-dropzone-sub">JPG / PNG / WebP &middot; max 10 fotiek &middot; automatická kompresia</div>
-                <input type="file" id="prop-photos" accept="image/*" multiple onchange="pmHandleFileInput(event)" />
-              </label>
-
-              <!-- Counter + hint -->
-              <div class="pm-header">
-                <div class="pm-count" id="pm-count">0 / 10 fotiek</div>
-                <div class="pm-hint">💡 Prvá fotka (zlatý rámček) je titulná. Pretiahnite myšou pre zmenu poradia.</div>
-              </div>
-
-              <!-- Photo grid (sortable) -->
-              <div class="pm-grid" id="prop-photo-preview"></div>
-            </div>
-
-            <div class="wiz-section-title">🔗 URL odkaz na inzerát</div>
-            <div class="form-group">
-              <label>URL (voliteľné)</label>
-              <input type="url" id="prop-url" placeholder="https://..." />
-            </div>
-          </div>
-
-          <!-- ============== STEP 4: POPIS & AI ============== -->
-          <div class="wiz-panel" data-step="4">
-            <div class="wiz-section-title">📝 Popis a titulok inzerátu</div>
-            <div class="form-group">
-              <label>Popis nehnuteľnosti</label>
-              <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateDescription()">
-                  <span id="ai-gen-text">✨ Generovať s AI</span>
-                  <span id="ai-gen-spinner" style="display:none;">⏳ Generujem...</span>
-                </button>
-                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#E5F5F1;color:#0B2A3C;" onclick="templateDescription()">
-                  📝 Použiť šablónu
-                </button>
-                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:#FFF7ED;color:#D97706;" onclick="openSampleAds()">
-                  📚 Vzorové inzeráty
-                </button>
-              </div>
-              <textarea id="prop-description" rows="6" placeholder="Detailný popis nehnuteľnosti... (použite AI generovanie alebo šablónu)"></textarea>
-              <div id="ai-gen-error" style="display:none;font-size:0.78rem;color:#DC2626;margin-top:0.3rem;"></div>
-            </div>
-            <div class="form-group">
-              <label>Titulok inzerátu (AI)</label>
-              <div style="display:flex;gap:0.5rem;align-items:center;">
-                <input type="text" id="prop-ai-headline" placeholder="AI vygeneruje chytľavý titulok..." style="flex:1;" />
-                <button type="button" class="btn" style="font-size:0.78rem;padding:5px 12px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;" onclick="aiGenerateHeadline()">✨ Titulok</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Interné poznámky</label>
-              <textarea id="prop-notes" rows="2" placeholder="Vlastné poznámky (len pre vás)..."></textarea>
-            </div>
-          </div>
-
-          <!-- ============== STEP 5: NÁHĽAD INZERÁTU ============== -->
-          <div class="wiz-panel" data-step="5">
             <div class="wiz-section-title">👁️ Náhľad inzerátu</div>
             <p style="font-size:0.78rem;color:var(--text-light);margin-bottom:0.75rem;">
               Pozrite si ako bude váš inzerát vyzerať pred publikovaním. Vpravo sú kontroly kvality pre vybraný portál.
