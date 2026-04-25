@@ -1,0 +1,25 @@
+{
+  "name": "secpro-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "SecPro backend — Slovak real-estate aggregator",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "scrape:bezrealitky": "node workers/scrape-bezrealitky.js",
+    "scrape:nehnutelnosti": "node workers/scrape-nehnutelnosti.js",
+    "scrape:bazos": "node workers/scrape-bazos.js",
+    "extract:pending": "node workers/extract-pending.js",
+    "scheduler": "node workers/scheduler.js",
+    "db:test": "node lib/test-connection.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "node-html-parser": "^6.1.13"
+  },
+  "devDependencies": {}
+}

@@ -12,3 +12,4 @@ read_*.js
 # Backups
 *.local_backup
 .env*.local
+backend/.env
