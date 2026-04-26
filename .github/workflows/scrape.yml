@@ -1,73 +1,101 @@
 name: Scrape & Ingest
 
-# Runs every 2 hours (12√ó daily). Free tier on GitHub Actions:
-#   - 2000 min/month for free repos
-#   - This workflow: ~5-8 min per run √ó 12 runs/day √ó 30 days ‚Čą 2160 min
-#     (just over budget ‚ÄĒ we'll tune cadence if it gets close)
+# Matrix strategy: 8 cities run IN PARALLEL ‚Üí each city finishes in ~5 min instead of 30 min serial.
+# Free tier GH Actions allows 20 concurrent jobs ‚Üí 8 cities + 1 extract = safe.
 #
-# To enable: in repo Settings ‚Üí Secrets and variables ‚Üí Actions, add:
-#   SUPABASE_URL                = https://zhvptfstdrxtscdmohbs.supabase.co
-#   SUPABASE_SERVICE_ROLE_KEY   = <service_role key from Supabase>
-#   GEMINI_API_KEY              = <Google AI Studio key>
+# Cron: every 2h (12√ó daily). Each run cost: ~50 min total CPU minutes (matrix sums across cities).
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # every 2 hours
-  workflow_dispatch:           # allow manual trigger from GitHub UI
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false   # one city failing should not abort the others
+      matrix:
+        city:
+          - Bratislava
+          - KoŇ°ice
+          - Trenńć√≠n
+          - ŇĹilina
+          - Nitra
+          - Trnava
+          - Bansk√° Bystrica
+          - PreŇ°ov
     defaults:
       run:
         working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
-
-      - name: Use Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-
       - name: Install deps
         run: npm ci --no-audit --no-fund
-
-      - name: Run scrapers
+      - name: Scrape ${{ matrix.city }}
         env:
           SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
-        run: node workers/backfill.js
-        continue-on-error: true
+        run: node workers/backfill.js --city "${{ matrix.city }}"
 
   extract:
     needs: scrape
+    if: always()   # run extraction even if some scrape jobs failed
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
-
-      - name: Use Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-
       - name: Install deps
         run: npm ci --no-audit --no-fund
-
-      - name: Run AI extraction (capped)
+      - name: AI extraction (cap 200/run)
         env:
           SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY:             ${{ secrets.GEMINI_API_KEY }}
-        # Cap at 100 listings per run to stay within Gemini free tier daily quota
-        run: node workers/extract-pending.js --limit 100 --delay 1000
+        run: node workers/extract-pending.js --limit 200 --delay 1000
+        continue-on-error: true
+
+  dedup:
+    needs: extract
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps
+        run: npm ci --no-audit --no-fund
+      - name: Cross-portal dedup (cap 500/run)
+        env:
+          SUPABASE_URL:               ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        # Dedup script created by background agent, see backend/workers/dedup-pending.js
+        run: |
+          if [ -f workers/dedup-pending.js ]; then
+            node workers/dedup-pending.js --limit 500 --hours 6
+          else
+            echo "dedup-pending.js not yet implemented, skipping"
+          fi
         continue-on-error: true
