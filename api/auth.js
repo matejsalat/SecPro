@@ -2,6 +2,16 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { kvGet, kvSet, kvDel, handleCors, getKV, checkRateLimit, clearRateLimit } = require('../lib/kv');
 
+// ── Email allowlist (TEMPORARY access lock) ──
+// Set ALLOWED_EMAILS on Vercel (comma-separated). Empty = no restriction.
+// Affects: login, register, send-reset-code, verify-reset-code.
+function isAllowedEmail(email) {
+  const raw = process.env.ALLOWED_EMAILS || '';
+  const allow = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (allow.length === 0) return true;
+  return allow.includes((email || '').trim().toLowerCase());
+}
+
 module.exports = async (req, res) => {
   if (handleCors(req, res, 'POST, OPTIONS')) return;
 
@@ -72,6 +82,11 @@ async function handleRegister(req, res, KV_URL, KV_TOKEN) {
       }, delay);
     });
 
+  // Allowlist guard — silent reject to avoid enumeration of allowed addresses
+  if (!isAllowedEmail(emailLower)) {
+    return genericResponse();
+  }
+
   try {
     const existing = await kvGet(KV_URL, KV_TOKEN, userKey);
     if (existing) {
@@ -102,6 +117,11 @@ async function handleLogin(req, res, KV_URL, KV_TOKEN) {
 
   const emailLower = email.trim().toLowerCase();
   const userKey = `user:${emailLower}`;
+
+  // Allowlist guard — same generic error to avoid enumeration
+  if (!isAllowedEmail(emailLower)) {
+    return res.status(401).json({ error: 'Nesprávny e-mail alebo heslo.' });
+  }
 
   try {
     const user = await kvGet(KV_URL, KV_TOKEN, userKey);
@@ -244,6 +264,11 @@ async function handleSendResetCode(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
+  // Allowlist guard — pretend success to avoid leaking who's allowed
+  if (!isAllowedEmail(email)) {
+    return res.status(200).json({ token: 'no-op' });
+  }
+
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const RESET_SECRET = process.env.RESET_SECRET;
   if (!RESEND_API_KEY || !RESET_SECRET) {
@@ -316,6 +341,11 @@ async function handleVerifyResetCode(req, res, KV_URL, KV_TOKEN) {
   try {
     payload = JSON.parse(Buffer.from(payloadB64, 'base64').toString());
   } catch {
+    return res.status(400).json({ error: 'Invalid token' });
+  }
+
+  // Allowlist guard — applies even if a stale token leaked
+  if (!isAllowedEmail(payload.email)) {
     return res.status(400).json({ error: 'Invalid token' });
   }
 
