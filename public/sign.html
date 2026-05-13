@@ -13,13 +13,14 @@
   .brand-header{
     background:linear-gradient(135deg,#0B2A3C 0%,#1A7A8A 100%);
     color:#fff;
-    padding:24px 16px;
-    text-align:center;
+    padding:20px 16px;
     width:100%;
     box-shadow:0 2px 12px rgba(11,42,60,0.18);
+    display:flex; align-items:center; justify-content:center; gap:14px;
   }
-  .brand-name{font-size:22px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
-  .brand-tag{font-size:12px;opacity:.85;margin-top:4px;letter-spacing:.4px}
+  .brand-logo{width:36px;height:36px;object-fit:contain;flex-shrink:0}
+  .brand-name{font-size:22px;font-weight:800;letter-spacing:1px;text-transform:uppercase;line-height:1.1}
+  .brand-tag{font-size:12px;opacity:.85;margin-top:2px;letter-spacing:.4px}
 
   /* Card */
   .card{background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(11,42,60,0.10);max-width:900px;width:100%;overflow:hidden;border:1px solid #E5E9F0}
@@ -169,8 +170,11 @@
 <body>
 
 <header class="brand-header">
-  <div class="brand-name">SecPro</div>
-  <div class="brand-tag">Zabezpečené elektronické podpisy</div>
+  <img class="brand-logo" src="img/secpro-logo-s-white.png" alt="SecPro" width="36" height="36">
+  <div>
+    <div class="brand-name">SecPro</div>
+    <div class="brand-tag">Secure electronic signatures</div>
+  </div>
 </header>
 
 <div class="page-wrap">

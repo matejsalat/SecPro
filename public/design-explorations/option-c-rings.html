@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SecPro Dashboard — Option C: Activity Rings</title>
+<style>
+  :root {
+    --bg: #000000;
+    --surface: #1C1C1E;
+    --surface-2: #2C2C2E;
+    --text: #FFFFFF;
+    --text-2: #8E8E93;
+    --hairline: rgba(255, 255, 255, 0.1);
+    --ring-1: #FA114F; /* move pink/red */
+    --ring-2: #A5FF1A; /* exercise green */
+    --ring-3: #00E5FF; /* stand cyan (custom) */
+    --ring-4: #FF9F0A;
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .pageheader { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 32px; }
+  .pageheader h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .pageheader .sub { color: var(--text-2); font-size: 13px; }
+
+  /* Hero rings card */
+  .rings-hero {
+    background: var(--surface);
+    border-radius: 22px;
+    padding: 32px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 32px;
+    align-items: center;
+  }
+  .rings-svg {
+    width: 260px; height: 260px;
+    justify-self: center;
+  }
+  .rings-svg circle.bg { fill: none; stroke-width: 22; opacity: 0.18; }
+  .rings-svg circle.fg { fill: none; stroke-width: 22; stroke-linecap: round; transform-origin: center; transform: rotate(-90deg); }
+  .rings-stats { display: flex; flex-direction: column; gap: 18px; }
+  .ring-stat { display: flex; align-items: center; gap: 14px; }
+  .ring-stat .indicator {
+    width: 10px; height: 30px; border-radius: 4px;
+  }
+  .ring-stat .body {
+    flex: 1;
+  }
+  .ring-stat .name { font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .ring-stat .val {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .ring-stat .val .unit { color: var(--text-2); font-size: 14px; font-weight: 500; }
+  .ring-stat .goal { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  .row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .donut-card {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 16px;
+    position: relative; overflow: hidden;
+  }
+  .donut-card::before {
+    content: '';
+    position: absolute; inset: -50% -20% auto auto;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, var(--glow, #FA114F) 0%, transparent 60%);
+    opacity: 0.18;
+    pointer-events: none;
+  }
+  .donut-card h2 {
+    font-size: 13px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin: 0; font-weight: 600;
+  }
+  .donut-card .ring { width: 120px; height: 120px; position: relative; }
+  .donut-card .ring svg { width: 100%; height: 100%; }
+  .donut-card .ring svg circle { fill: none; stroke-width: 14; }
+  .donut-card .ring .center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .donut-card .ring .big { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .donut-card .ring .small { font-size: 11px; color: var(--text-2); font-weight: 500; }
+
+  .pipeline-card {
+    background: var(--surface);
+    border-radius: 18px;
+    padding: 24px;
+  }
+  .pipeline-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .pipeline-title h2 { font-size: 17px; font-weight: 600; margin: 0; }
+  .pipeline-track {
+    height: 14px;
+    background: var(--hairline);
+    border-radius: 7px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 16px;
+  }
+  .pipeline-track .seg { flex: var(--w, 1); }
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+  }
+  .pipeline-cell {
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .pipeline-cell .count {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 2px;
+  }
+  .pipeline-cell .name {
+    font-size: 10px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="pageheader">
+  <h1>Dashboard</h1>
+  <div class="sub">Tuesday, May 13</div>
+</div>
+
+<!-- Hero rings -->
+<div class="rings-hero">
+  <svg class="rings-svg" viewBox="0 0 200 200">
+    <!-- Ring 1 (outermost): Sales target -->
+    <circle class="bg" cx="100" cy="100" r="80" stroke="#FA114F"/>
+    <circle class="fg" cx="100" cy="100" r="80" stroke="#FA114F"
+            stroke-dasharray="376 502.65" />
+    <!-- Ring 2: Viewings target -->
+    <circle class="bg" cx="100" cy="100" r="56" stroke="#A5FF1A"/>
+    <circle class="fg" cx="100" cy="100" r="56" stroke="#A5FF1A"
+            stroke-dasharray="263 351.86" />
+    <!-- Ring 3: AML compliance -->
+    <circle class="bg" cx="100" cy="100" r="32" stroke="#00E5FF"/>
+    <circle class="fg" cx="100" cy="100" r="32" stroke="#00E5FF"
+            stroke-dasharray="167 201.06" />
+  </svg>
+
+  <div class="rings-stats">
+    <div class="ring-stat">
+      <div class="indicator" style="background:#FA114F"></div>
+      <div class="body">
+        <div class="name">Sales</div>
+        <div class="val">7 <span class="unit">/ 10 properties</span></div>
+        <div class="goal">75 % of monthly target</div>
+      </div>
+    </div>
+    <div class="ring-stat">
+      <div class="indicator" style="background:#A5FF1A"></div>
+      <div class="body">
+        <div class="name">Viewings</div>
+        <div class="val">48 <span class="unit">/ 60</span></div>
+        <div class="goal">80 % of monthly target</div>
+      </div>
+    </div>
+    <div class="ring-stat">
+      <div class="indicator" style="background:#00E5FF"></div>
+      <div class="body">
+        <div class="name">AML compliance</div>
+        <div class="val">37 <span class="unit">/ 40 cleared</span></div>
+        <div class="goal">93 % of quarterly target</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sub-stats as small donut cards -->
+<div class="row-grid">
+  <div class="donut-card" style="--glow:#FA114F">
+    <h2>Active listings</h2>
+    <div class="ring">
+      <svg viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20" stroke="#FA114F" opacity="0.2"/>
+        <circle cx="25" cy="25" r="20" stroke="#FA114F" stroke-dasharray="100 125.66" stroke-dashoffset="0" transform="rotate(-90 25 25)" stroke-linecap="round"/>
+      </svg>
+      <div class="center">
+        <div class="big">12</div>
+        <div class="small">total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="donut-card" style="--glow:#A5FF1A">
+    <h2>Portfolio</h2>
+    <div class="ring">
+      <svg viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20" stroke="#A5FF1A" opacity="0.2"/>
+        <circle cx="25" cy="25" r="20" stroke="#A5FF1A" stroke-dasharray="105 125.66" stroke-dashoffset="0" transform="rotate(-90 25 25)" stroke-linecap="round"/>
+      </svg>
+      <div class="center">
+        <div class="big">€2.4M</div>
+        <div class="small">+8.2 %</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="donut-card" style="--glow:#FF9F0A">
+    <h2>AML pending</h2>
+    <div class="ring">
+      <svg viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="20" stroke="#FF9F0A" opacity="0.2"/>
+        <circle cx="25" cy="25" r="20" stroke="#FF9F0A" stroke-dasharray="40 125.66" stroke-dashoffset="0" transform="rotate(-90 25 25)" stroke-linecap="round"/>
+      </svg>
+      <div class="center">
+        <div class="big">3</div>
+        <div class="small">to clear</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<div class="pipeline-card">
+  <div class="pipeline-title">
+    <h2>Pipeline</h2>
+    <div style="color:var(--text-2);font-size:13px;">52 contacts in flow</div>
+  </div>
+  <div class="pipeline-track">
+    <div class="seg" style="--w:5;background:#5AC8FA"></div>
+    <div class="seg" style="--w:8;background:#007AFF"></div>
+    <div class="seg" style="--w:12;background:#5E5CE6"></div>
+    <div class="seg" style="--w:6;background:#BF5AF2"></div>
+    <div class="seg" style="--w:9;background:#FF6B6B"></div>
+    <div class="seg" style="--w:4;background:#FF9F0A"></div>
+    <div class="seg" style="--w:3;background:#FFD60A"></div>
+    <div class="seg" style="--w:7;background:#30D158"></div>
+  </div>
+  <div class="pipeline-grid">
+    <div class="pipeline-cell"><div class="count">5</div><div class="name">New lead</div></div>
+    <div class="pipeline-cell"><div class="count">8</div><div class="name">Contact</div></div>
+    <div class="pipeline-cell"><div class="count">12</div><div class="name">Meeting</div></div>
+    <div class="pipeline-cell"><div class="count">6</div><div class="name">Photos</div></div>
+    <div class="pipeline-cell"><div class="count">9</div><div class="name">Listing</div></div>
+    <div class="pipeline-cell"><div class="count">4</div><div class="name">Viewings</div></div>
+    <div class="pipeline-cell"><div class="count">3</div><div class="name">Reserved</div></div>
+    <div class="pipeline-cell"><div class="count">7</div><div class="name">Sold</div></div>
+  </div>
+</div>
+
+</body>
+</html>

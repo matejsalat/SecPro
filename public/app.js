@@ -148,6 +148,17 @@ function getOrCreateChart(canvasId, config) {
   return charts[canvasId];
 }
 
+// Re-render dashboard + charts when language switches (Chart.js charts have
+// baked-in translated strings — they must be rebuilt for the new language).
+document.addEventListener('i18n:changed', () => {
+  try {
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-home' && typeof renderDashboard === 'function') {
+      renderDashboard();
+    }
+  } catch {}
+});
+
 // ==================== 1. INVESTOVANIE ====================
 function calcInvestment() {
   const P0 = +document.getElementById('inv-initial').value;
@@ -12510,6 +12521,10 @@ function renderDashActivityFeed(props, contacts) {
 
 function renderDashPipeline(props) {
   const container = document.getElementById('dash-funnel');
+  const bar = document.getElementById('dash-pipeline-bar');
+  const totalEl = document.getElementById('dash-pipeline-total');
+  if (!container) return;
+
   const counts = {};
   PROP_PIPELINE.forEach(stage => { counts[stage.key] = 0; });
 
@@ -12519,12 +12534,32 @@ function renderDashPipeline(props) {
     counts[key] = (counts[key] || 0) + 1;
   });
 
+  const totalProps = PROP_PIPELINE.reduce((s, st) => s + (counts[st.key] || 0), 0);
+
+  // Apple-style segmented progress bar
+  if (bar) {
+    bar.innerHTML = PROP_PIPELINE.map(stage => {
+      const count = counts[stage.key] || 0;
+      // Weight: minimum 1 so empty stages still appear as a hairline
+      const weight = Math.max(count, totalProps === 0 ? 1 : 0.5);
+      const label = (window.t ? t('home.pipeline.stage.' + stage.key) : stage.label);
+      return '<div class="seg" style="flex:' + weight + ';background:' + stage.color + ';" onclick="dashFilterByStatus(\'' + stage.key + '\')" title="' + label + ': ' + count + '"></div>';
+    }).join('');
+  }
+
+  if (totalEl) {
+    const lbl = window.t ? t('home.pipeline.total') : 'spolu';
+    totalEl.textContent = totalProps + ' ' + lbl;
+  }
+
+  // Cells below — clean Apple Health style (rounded, neutral bg, color dot)
   container.innerHTML = PROP_PIPELINE.map(stage => {
     const count = counts[stage.key] || 0;
-    return '<div class="dash-funnel-stage" style="background:' + stage.color + '0A;color:' + stage.color + ';" onclick="dashFilterByStatus(\'' + stage.key + '\')" title="' + stage.label + ': ' + count + '">' +
+    const label = (window.t ? t('home.pipeline.stage.' + stage.key) : stage.label);
+    return '<div class="dash-funnel-stage" onclick="dashFilterByStatus(\'' + stage.key + '\')" title="' + label + ': ' + count + '">' +
       '<div class="dash-funnel-dot" style="background:' + stage.color + ';"></div>' +
-      '<div class="dash-funnel-count" style="color:' + stage.color + ';">' + count + '</div>' +
-      '<div class="dash-funnel-label">' + stage.label + '</div>' +
+      '<div class="dash-funnel-count">' + count + '</div>' +
+      '<div class="dash-funnel-label">' + label + '</div>' +
     '</div>';
   }).join('');
 }
@@ -12549,37 +12584,95 @@ function dashFilterByStatus(status) {
 function renderDashCharts(props) {
   const active = props.filter(p => p.status !== 'zamietnuty' && p.status !== 'stiahnuta');
 
+  // Apple-style palette (matches stat-card tints + SecPro cyan)
+  const APPLE_PALETTE = ['#2EC4D4', '#0066CC', '#6B46C1', '#B07000', '#E8734A', '#34C759'];
+
   // --- Doughnut: Property type distribution ---
   const typeCounts = {};
   active.forEach(p => {
-    const label = PROP_TYPE_MAP[p.type] || p.type || 'Iný';
+    const label = PROP_TYPE_MAP[p.type] || p.type || (window.t ? t('prop.type.other') : 'Iný');
     typeCounts[label] = (typeCounts[label] || 0) + 1;
   });
   const typeLabels = Object.keys(typeCounts);
   const typeData = Object.values(typeCounts);
-  const typeColors = ['#0891B2', '#2563EB', '#7C3AED', '#D97706', '#16A34A', '#EA580C'];
+  const typeTotal = typeData.reduce((s, n) => s + n, 0);
 
   const typeCanvas = document.getElementById('dash-chart-type');
   if (typeLabels.length > 0 && typeCanvas) {
+    // Center-label plugin (Apple Health style: big number in middle of donut)
+    const centerLabelPlugin = {
+      id: 'centerLabel',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea: { width, height, left, top } } = chart;
+        ctx.save();
+        const cx = left + width / 2;
+        const cy = top + height / 2 - 6;  // slight upward shift for "Total" label below
+        // Big number
+        ctx.fillStyle = '#1C1C1E';
+        ctx.font = '700 28px -apple-system, "SF Pro Display", Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(typeTotal), cx, cy);
+        // Small label
+        ctx.fillStyle = '#8E8E93';
+        ctx.font = '600 10px -apple-system, "SF Pro Display", Inter, sans-serif';
+        const totalLbl = (window.t ? t('home.chart.total') : 'TOTAL');
+        ctx.fillText(totalLbl.toUpperCase(), cx, cy + 22);
+        ctx.restore();
+      }
+    };
     getOrCreateChart('dash-chart-type', {
       type: 'doughnut',
       data: {
         labels: typeLabels,
-        datasets: [{ data: typeData, backgroundColor: typeColors.slice(0, typeLabels.length), borderWidth: 0, hoverOffset: 6 }]
+        datasets: [{
+          data: typeData,
+          backgroundColor: APPLE_PALETTE.slice(0, typeLabels.length),
+          borderWidth: 0,
+          hoverOffset: 8,
+          spacing: 2
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11, weight: 600 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 } }
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: { family: '-apple-system, "SF Pro Display", Inter', size: 12, weight: 600 },
+              padding: 14,
+              usePointStyle: true,
+              pointStyleWidth: 8,
+              color: '#1C1C1E'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(28, 28, 30, 0.92)',
+            titleFont: { family: '-apple-system, Inter', size: 12, weight: 600 },
+            bodyFont: { family: '-apple-system, Inter', size: 13, weight: 700 },
+            cornerRadius: 8,
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: function(ctx) {
+                const pct = typeTotal > 0 ? Math.round((ctx.parsed / typeTotal) * 100) : 0;
+                return ctx.parsed + ' · ' + pct + ' %';
+              }
+            }
+          }
         },
-        cutout: '65%'
-      }
+        cutout: '72%',
+        animation: { animateRotate: true, duration: 700, easing: 'easeOutQuart' }
+      },
+      plugins: [centerLabelPlugin]
     });
   } else if (typeCanvas) {
-    typeCanvas.parentElement.innerHTML = '<div class="dash-empty-state">Pridajte nehnuteľnosti pre zobrazenie grafu</div>';
+    const msg = (window.t ? t('home.chart.empty') : 'Pridajte nehnuteľnosti pre zobrazenie grafu');
+    typeCanvas.parentElement.innerHTML = '<div class="dash-empty-state">' + msg + '</div>';
   }
 
-  // --- Bar: Price distribution ---
+  // --- Horizontal bars: Price distribution (Apple Health style with gradient fill) ---
   const brackets = [
     { label: '< 100k', min: 0, max: 100000 },
     { label: '100-200k', min: 100000, max: 200000 },
@@ -12592,23 +12685,70 @@ function renderDashCharts(props) {
 
   const priceCanvas = document.getElementById('dash-chart-price');
   if (hasPrice && priceCanvas) {
+    // Build a horizontal gradient for the bars (cyan → teal)
+    const ctx = priceCanvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, priceCanvas.offsetWidth || 360, 0);
+    gradient.addColorStop(0, '#2EC4D4');
+    gradient.addColorStop(1, '#1A7A8A');
+
     getOrCreateChart('dash-chart-price', {
       type: 'bar',
       data: {
         labels: brackets.map(b => b.label),
-        datasets: [{ data: priceData, backgroundColor: 'rgba(46,196,212,0.6)', borderColor: 'rgba(46,196,212,1)', borderWidth: 1, borderRadius: 6, barPercentage: 0.7 }]
+        datasets: [{
+          data: priceData,
+          backgroundColor: gradient,
+          borderWidth: 0,
+          borderRadius: 8,
+          barPercentage: 0.62,
+          categoryPercentage: 0.85
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(28, 28, 30, 0.92)',
+            titleFont: { family: '-apple-system, Inter', size: 12, weight: 600 },
+            bodyFont: { family: '-apple-system, Inter', size: 13, weight: 700 },
+            cornerRadius: 8,
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: function(ctx) {
+                const lbl = (window.t ? t('home.chart.properties_unit') : 'properties');
+                return ctx.parsed.x + ' ' + lbl;
+              }
+            }
+          }
+        },
         scales: {
-          y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Inter', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
-          x: { ticks: { font: { family: 'Inter', size: 11 } }, grid: { display: false } }
-        }
+          x: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              font: { family: '-apple-system, Inter', size: 11 },
+              color: '#8E8E93'
+            },
+            grid: { color: 'rgba(60, 60, 67, 0.06)', drawBorder: false, drawTicks: false }
+          },
+          y: {
+            ticks: {
+              font: { family: '-apple-system, Inter', size: 11, weight: 600 },
+              color: '#1C1C1E'
+            },
+            grid: { display: false, drawBorder: false }
+          }
+        },
+        animation: { duration: 700, easing: 'easeOutQuart' }
       }
     });
   } else if (priceCanvas) {
-    priceCanvas.parentElement.innerHTML = '<div class="dash-empty-state">Pridajte nehnuteľnosti s cenou pre zobrazenie grafu</div>';
+    const msg = (window.t ? t('home.chart.empty_price') : 'Pridajte nehnuteľnosti s cenou pre zobrazenie grafu');
+    priceCanvas.parentElement.innerHTML = '<div class="dash-empty-state">' + msg + '</div>';
   }
 }
 

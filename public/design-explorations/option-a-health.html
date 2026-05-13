@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SecPro Dashboard — Option A: Apple Health</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --text: #1C1C1E;
+    --text-2: #6C6C70;
+    --text-3: #AEAEB2;
+    --hairline: rgba(60, 60, 67, 0.12);
+    --tint-teal: #1A7A8A;
+    --tint-cyan: #2EC4D4;
+    --tint-blue: #5AC8FA;
+    --tint-amber: #FF9F0A;
+    --tint-purple: #BF5AF2;
+    --tint-green: #34C759;
+    --tint-red: #FF453A;
+    --radius: 16px;
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .h-pageheader {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 24px;
+  }
+  .h-pageheader h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .h-pageheader .date { color: var(--text-2); font-size: 13px; }
+
+  /* Stat cards row */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent-from, var(--tint-cyan)), var(--accent-to, var(--tint-teal)));
+    opacity: 0.04;
+    pointer-events: none;
+  }
+  .stat-card .label {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-2);
+    margin-bottom: 6px;
+  }
+  .stat-card .value {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .stat-card .unit {
+    font-size: 14px; color: var(--text-2); font-weight: 500;
+    margin-left: 2px;
+  }
+  .stat-card .delta {
+    font-size: 12px; font-weight: 600;
+    margin-top: 4px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .stat-card .delta.up { color: var(--tint-green); }
+  .stat-card .delta.down { color: var(--tint-red); }
+  .stat-card .spark {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 40px;
+  }
+  .stat-card.c1 { --accent-from: #2EC4D4; --accent-to: #1A7A8A; }
+  .stat-card.c2 { --accent-from: #5AC8FA; --accent-to: #007AFF; }
+  .stat-card.c3 { --accent-from: #FF9F0A; --accent-to: #FF6B00; }
+  .stat-card.c4 { --accent-from: #BF5AF2; --accent-to: #5E5CE6; }
+  .stat-card.c5 { --accent-from: #FF453A; --accent-to: #E8734A; }
+
+  /* Pipeline funnel as segmented progress bar */
+  .pipeline-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+  }
+  .pipeline-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .pipeline-title h2 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .pipeline-title .total { color: var(--text-2); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .pipeline-bar {
+    display: flex; gap: 4px; margin-bottom: 12px;
+    height: 12px; border-radius: 6px; overflow: hidden;
+  }
+  .pipeline-bar .seg {
+    flex: var(--w, 1);
+    background: var(--c, var(--tint-cyan));
+    transition: opacity 0.2s;
+    cursor: pointer;
+  }
+  .pipeline-bar .seg:hover { opacity: 0.8; }
+  .pipeline-stages {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+  .pipeline-stage {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 8px 0;
+  }
+  .pipeline-stage .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--c, var(--tint-cyan));
+    margin-bottom: 4px;
+  }
+  .pipeline-stage .name {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-2);
+  }
+  .pipeline-stage .count {
+    font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Charts row */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .chart-card h2 { font-size: 17px; font-weight: 600; margin: 0 0 20px; letter-spacing: -0.01em; }
+
+  /* Donut */
+  .donut-wrap {
+    display: flex; align-items: center; gap: 32px;
+    height: 200px;
+  }
+  .donut {
+    width: 160px; height: 160px; position: relative;
+    flex-shrink: 0;
+  }
+  .donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .donut circle { fill: none; stroke-width: 18; }
+  .donut .center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .donut .center .big {
+    font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .donut .center .small {
+    font-size: 12px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .donut-legend .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--hairline);
+  }
+  .donut-legend .row:last-child { border: none; }
+  .donut-legend .left { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .donut-legend .swatch { width: 10px; height: 10px; border-radius: 3px; }
+  .donut-legend .right {
+    font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  /* Horizontal bars (price range) */
+  .hbars { display: flex; flex-direction: column; gap: 14px; }
+  .hbar-row { display: grid; grid-template-columns: 100px 1fr 60px; gap: 12px; align-items: center; }
+  .hbar-row .lbl {
+    font-size: 12px; color: var(--text-2); text-transform: uppercase;
+    letter-spacing: 0.04em; font-weight: 600;
+  }
+  .hbar-row .bar {
+    height: 8px; background: var(--hairline); border-radius: 4px; overflow: hidden;
+  }
+  .hbar-row .bar .fill {
+    height: 100%; background: linear-gradient(90deg, var(--tint-cyan), var(--tint-teal));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+  .hbar-row .val {
+    font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<div class="h-pageheader">
+  <h1>Dashboard</h1>
+  <div class="date">Tuesday, May 13</div>
+</div>
+
+<!-- Stat cards with mini sparklines -->
+<div class="stat-grid">
+  <div class="stat-card c1">
+    <div class="label">Active</div>
+    <div class="value">12</div>
+    <div class="delta up">↑ 2 this week</div>
+    <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <path d="M0,30 L10,28 L20,25 L30,27 L40,22 L50,20 L60,18 L70,15 L80,14 L90,12 L100,10" fill="none" stroke="#2EC4D4" stroke-width="2"/>
+      <path d="M0,30 L10,28 L20,25 L30,27 L40,22 L50,20 L60,18 L70,15 L80,14 L90,12 L100,10 L100,40 L0,40 Z" fill="url(#grad1)" opacity="0.2"/>
+      <defs><linearGradient id="grad1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2EC4D4"/><stop offset="100%" stop-color="#2EC4D4" stop-opacity="0"/></linearGradient></defs>
+    </svg>
+  </div>
+  <div class="stat-card c2">
+    <div class="label">Portfolio</div>
+    <div class="value">€2.4<span class="unit">M</span></div>
+    <div class="delta up">↑ 8.2 %</div>
+    <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <path d="M0,32 L10,30 L20,33 L30,28 L40,25 L50,22 L60,24 L70,19 L80,16 L90,15 L100,12" fill="none" stroke="#007AFF" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="stat-card c3">
+    <div class="label">Viewings</div>
+    <div class="value">48</div>
+    <div class="delta up">↑ 12 this week</div>
+    <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <path d="M0,28 L10,30 L20,25 L30,22 L40,28 L50,20 L60,22 L70,18 L80,15 L90,18 L100,12" fill="none" stroke="#FF9F0A" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="stat-card c4">
+    <div class="label">Sold</div>
+    <div class="value">7</div>
+    <div class="delta up">↑ 1 this month</div>
+    <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <path d="M0,35 L10,35 L20,33 L30,30 L40,30 L50,28 L60,28 L70,25 L80,22 L90,20 L100,18" fill="none" stroke="#BF5AF2" stroke-width="2"/>
+    </svg>
+  </div>
+  <div class="stat-card c5">
+    <div class="label">AML pending</div>
+    <div class="value">3</div>
+    <div class="delta down">↓ 1 since Friday</div>
+    <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <path d="M0,15 L10,18 L20,20 L30,22 L40,25 L50,24 L60,27 L70,28 L80,30 L90,33 L100,32" fill="none" stroke="#FF453A" stroke-width="2"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Pipeline as segmented bar -->
+<div class="pipeline-card">
+  <div class="pipeline-title">
+    <h2>Pipeline</h2>
+    <div class="total">12 properties · 38 contacts in flow</div>
+  </div>
+  <div class="pipeline-bar">
+    <div class="seg" style="--w:5;--c:#5AC8FA"></div>
+    <div class="seg" style="--w:8;--c:#007AFF"></div>
+    <div class="seg" style="--w:12;--c:#5E5CE6"></div>
+    <div class="seg" style="--w:6;--c:#BF5AF2"></div>
+    <div class="seg" style="--w:9;--c:#FF6B6B"></div>
+    <div class="seg" style="--w:4;--c:#FF9F0A"></div>
+    <div class="seg" style="--w:3;--c:#FFD60A"></div>
+    <div class="seg" style="--w:7;--c:#34C759"></div>
+  </div>
+  <div class="pipeline-stages">
+    <div class="pipeline-stage"><div class="dot" style="--c:#5AC8FA"></div><div class="name">New lead</div><div class="count">5</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#007AFF"></div><div class="name">Contact</div><div class="count">8</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#5E5CE6"></div><div class="name">Meeting</div><div class="count">12</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#BF5AF2"></div><div class="name">Photos</div><div class="count">6</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#FF6B6B"></div><div class="name">Listing</div><div class="count">9</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#FF9F0A"></div><div class="name">Viewings</div><div class="count">4</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#FFD60A"></div><div class="name">Reserved</div><div class="count">3</div></div>
+    <div class="pipeline-stage"><div class="dot" style="--c:#34C759"></div><div class="name">Sold</div><div class="count">7</div></div>
+  </div>
+</div>
+
+<!-- Donut + horizontal bars -->
+<div class="charts-row">
+  <div class="chart-card">
+    <h2>By type</h2>
+    <div class="donut-wrap">
+      <div class="donut">
+        <svg viewBox="0 0 100 100">
+          <!-- Background ring -->
+          <circle cx="50" cy="50" r="40" stroke="#F2F2F7"/>
+          <!-- Segments (stroke-dasharray = circumference 251.3, offsets calculated) -->
+          <circle cx="50" cy="50" r="40" stroke="#2EC4D4" stroke-dasharray="125.65 251.3" stroke-dashoffset="0"/>
+          <circle cx="50" cy="50" r="40" stroke="#007AFF" stroke-dasharray="75.39 251.3" stroke-dashoffset="-125.65"/>
+          <circle cx="50" cy="50" r="40" stroke="#BF5AF2" stroke-dasharray="50.26 251.3" stroke-dashoffset="-201.04"/>
+        </svg>
+        <div class="center">
+          <div class="big">12</div>
+          <div class="small">Total</div>
+        </div>
+      </div>
+      <div class="donut-legend">
+        <div class="row">
+          <div class="left"><div class="swatch" style="background:#2EC4D4"></div>Apartments</div>
+          <div class="right">6 · 50 %</div>
+        </div>
+        <div class="row">
+          <div class="left"><div class="swatch" style="background:#007AFF"></div>Houses</div>
+          <div class="right">4 · 33 %</div>
+        </div>
+        <div class="row">
+          <div class="left"><div class="swatch" style="background:#BF5AF2"></div>Land</div>
+          <div class="right">2 · 17 %</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h2>Price range</h2>
+    <div class="hbars">
+      <div class="hbar-row">
+        <div class="lbl">&lt; €100k</div>
+        <div class="bar"><div class="fill" style="width:20%"></div></div>
+        <div class="val">1</div>
+      </div>
+      <div class="hbar-row">
+        <div class="lbl">€100–200k</div>
+        <div class="bar"><div class="fill" style="width:60%"></div></div>
+        <div class="val">3</div>
+      </div>
+      <div class="hbar-row">
+        <div class="lbl">€200–400k</div>
+        <div class="bar"><div class="fill" style="width:100%"></div></div>
+        <div class="val">5</div>
+      </div>
+      <div class="hbar-row">
+        <div class="lbl">€400k–1M</div>
+        <div class="bar"><div class="fill" style="width:40%"></div></div>
+        <div class="val">2</div>
+      </div>
+      <div class="hbar-row">
+        <div class="lbl">&gt; €1M</div>
+        <div class="bar"><div class="fill" style="width:20%"></div></div>
+        <div class="val">1</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

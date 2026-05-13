@@ -7,6 +7,11 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
+  <!-- Favicon / Apple touch -->
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+  <link rel="shortcut icon" href="img/favicon.ico">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="jspdf.umd.min.js"></script>
@@ -20,8 +25,8 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <link rel="stylesheet" href="styles.css">
   <!-- i18n: must load before app.js so t() is available at startup -->
-  <script src="i18n-dict.js"></script>
-  <script src="i18n.js"></script>
+  <script src="i18n-dict.js?v=2"></script>
+  <script src="i18n.js?v=2"></script>
 </head>
 <body>
 
@@ -29,7 +34,7 @@
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
     <div class="login-logo">
-      <div class="login-logo-icon">S</div>
+      <img class="login-logo-img" src="img/secpro-logo-s.png" alt="SecPro logo" width="64" height="64">
       <h1>SecPro</h1>
       <p data-i18n="app.subtitle">Centrum pre moderných maklérov</p>
     </div>
@@ -119,7 +124,7 @@
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="logo" onclick="showPage('home')">
-      <div class="logo-icon">S</div>
+      <img class="logo-icon-img" src="img/secpro-logo-s-white.png" alt="SecPro" width="34" height="34">
       SecPro
     </div>
     <span class="header-subtitle" data-i18n="app.subtitle">Centrum pre moderných maklérov</span>
@@ -268,49 +273,53 @@
 
       <!-- KPI Stats Row -->
       <div class="stats-row">
-        <div class="stat-card clickable" onclick="showPage('myproperties')">
+        <div class="stat-card clickable" onclick="showPage('myproperties')" style="--card-tint:#00838F">
           <div class="stat-icon teal"><i data-lucide="home"></i></div>
           <div class="stat-info">
             <div class="stat-value" id="dash-active-count">0</div>
-            <div class="stat-label">Aktívne nehnuteľnosti</div>
+            <div class="stat-label" data-i18n="home.stat.active">Aktívne nehnuteľnosti</div>
           </div>
         </div>
-        <div class="stat-card clickable" onclick="showPage('myproperties')">
+        <div class="stat-card clickable" onclick="showPage('myproperties')" style="--card-tint:#0066CC">
           <div class="stat-icon blue"><i data-lucide="banknote"></i></div>
           <div class="stat-info">
             <div class="stat-value" id="dash-portfolio-value">0 €</div>
-            <div class="stat-label">Hodnota portfólia</div>
+            <div class="stat-label" data-i18n="home.stat.portfolio">Hodnota portfólia</div>
           </div>
         </div>
-        <div class="stat-card clickable" onclick="showPage('myproperties')">
+        <div class="stat-card clickable" onclick="showPage('myproperties')" style="--card-tint:#B07000">
           <div class="stat-icon amber"><i data-lucide="eye"></i></div>
           <div class="stat-info">
             <div class="stat-value" id="dash-viewings-count">0</div>
-            <div class="stat-label">Obhliadky celkom</div>
+            <div class="stat-label" data-i18n="home.stat.viewings">Obhliadky celkom</div>
           </div>
         </div>
-        <div class="stat-card clickable" onclick="dashFilterByStatus('predana')">
+        <div class="stat-card clickable" onclick="dashFilterByStatus('predana')" style="--card-tint:#6B46C1">
           <div class="stat-icon violet"><i data-lucide="check-circle"></i></div>
           <div class="stat-info">
             <div class="stat-value" id="dash-sold-count">0</div>
-            <div class="stat-label">Predané</div>
+            <div class="stat-label" data-i18n="home.stat.sold">Predané</div>
           </div>
         </div>
-        <div class="stat-card clickable" onclick="showPage('aml')">
-          <div class="stat-icon" style="background:rgba(232,115,74,0.12);color:#E8734A;"><i data-lucide="shield-alert"></i></div>
+        <div class="stat-card clickable" onclick="showPage('aml')" style="--card-tint:#E8734A">
+          <div class="stat-icon" style="background:linear-gradient(135deg,#FEE6DA,#FDD3BD);color:#C45A2E;"><i data-lucide="shield-alert"></i></div>
           <div class="stat-info">
             <div class="stat-value" id="dash-aml-pending">0</div>
-            <div class="stat-label">Nepreverení klienti</div>
+            <div class="stat-label" data-i18n="home.stat.aml_pending">Nepreverení klienti</div>
           </div>
         </div>
       </div>
 
-      <!-- Pipeline Funnel -->
+      <!-- Pipeline (Apple-style segmented bar + cells) -->
       <div class="dash-pipeline">
         <div class="dash-pipeline-title">
-          <i data-lucide="git-branch" style="width:16px;height:16px;"></i>
-          Pipeline nehnuteľností
+          <div class="dash-pipeline-title-left">
+            <i data-lucide="git-branch" style="width:14px;height:14px;"></i>
+            <span data-i18n="home.pipeline.title">Pipeline nehnuteľností</span>
+          </div>
+          <div class="dash-pipeline-total" id="dash-pipeline-total"></div>
         </div>
+        <div class="dash-pipeline-bar" id="dash-pipeline-bar"></div>
         <div class="dash-funnel" id="dash-funnel"></div>
       </div>
 
@@ -318,15 +327,15 @@
       <div class="dash-charts-row">
         <div class="dash-chart-card">
           <div class="dash-chart-card-title">
-            <i data-lucide="pie-chart" style="width:15px;height:15px;"></i>
-            Podľa typu
+            <i data-lucide="pie-chart" style="width:14px;height:14px;"></i>
+            <span data-i18n="home.chart.by_type">Podľa typu</span>
           </div>
           <div class="dash-chart-canvas"><canvas id="dash-chart-type"></canvas></div>
         </div>
         <div class="dash-chart-card">
           <div class="dash-chart-card-title">
-            <i data-lucide="bar-chart-3" style="width:15px;height:15px;"></i>
-            Cenové rozpätie
+            <i data-lucide="bar-chart-3" style="width:14px;height:14px;"></i>
+            <span data-i18n="home.chart.price_range">Cenové rozpätie</span>
           </div>
           <div class="dash-chart-canvas"><canvas id="dash-chart-price"></canvas></div>
         </div>
@@ -4504,6 +4513,6 @@
   </div>
 </div>
 
-<script src="app.js?v=poi-back2"></script>
+<script src="app.js?v=i18n-pass1"></script>
 </body>
 </html>

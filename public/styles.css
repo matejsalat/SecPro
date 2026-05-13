@@ -54,6 +54,11 @@
       transition: opacity 0.2s;
     }
     .logo:hover { opacity: 0.85; }
+    .logo-icon-img {
+      width: 34px; height: 34px;
+      object-fit: contain;
+      display: block;
+    }
     .logo-icon {
       width: 34px; height: 34px;
       background: linear-gradient(135deg, rgba(46,196,212,0.3), rgba(26,122,138,0.4));
@@ -3634,83 +3639,131 @@
       gap: 1rem;
       margin-bottom: 2rem;
     }
+    /* ===== APPLE HEALTH STYLE DASHBOARD ===== */
     .stat-card {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.25rem;
-      box-shadow: var(--shadow);
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 1.25rem 1.4rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(11,42,60,0.04);
       display: flex;
       align-items: center;
       gap: 1rem;
-      border: 1px solid rgba(0,0,0,0.04);
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--card-tint, transparent);
+      opacity: 0.035;
+      pointer-events: none;
     }
     .stat-icon {
       width: 44px; height: 44px;
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
+      position: relative; z-index: 1;
     }
     .stat-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
-    .stat-icon.teal { background: linear-gradient(135deg, #E5F5F1, #D0F0EA); color: #1A7A8A; }
-    .stat-icon.blue { background: linear-gradient(135deg, #E0F2FE, #BAE6FD); color: #0369A1; }
-    .stat-icon.amber { background: linear-gradient(135deg, #FEF3C7, #FDE68A); color: #B45309; }
-    .stat-icon.violet { background: linear-gradient(135deg, #EDE9FE, #DDD6FE); color: #7C3AED; }
-    .stat-info { display: flex; flex-direction: column; }
-    .stat-value { font-size: 1.35rem; font-weight: 800; color: var(--primary-dark); line-height: 1.2; }
-    .stat-label { font-size: 0.72rem; color: var(--text-light); font-weight: 500; margin-top: 2px; }
-    .stat-card.clickable { cursor: pointer; transition: all 0.2s ease; }
-    .stat-card.clickable:hover { border-color: rgba(46,196,212,0.2); box-shadow: var(--shadow-lg); }
-    /* ===== DASHBOARD ===== */
+    .stat-icon.teal { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); color: #00838F; }
+    .stat-icon.blue { background: linear-gradient(135deg, #E1F0FF, #BAE0FF); color: #0066CC; }
+    .stat-icon.amber { background: linear-gradient(135deg, #FFF4DB, #FFE3A8); color: #B07000; }
+    .stat-icon.violet { background: linear-gradient(135deg, #F0EDFF, #DDD6FE); color: #6B46C1; }
+    .stat-info { display: flex; flex-direction: column; position: relative; z-index: 1; }
+    .stat-value {
+      font-size: 1.65rem; font-weight: 700;
+      color: #1C1C1E;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: 'tnum';
+    }
+    .stat-label {
+      font-size: 0.7rem; color: #6C6C70; font-weight: 600; margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .stat-card.clickable { cursor: pointer; transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s; }
+    .stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(11,42,60,0.08); }
+
+    /* Pipeline — segmented progress bar + cells below */
     .dash-pipeline {
-      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 1.5rem 1.75rem; margin-bottom: 1.75rem; border: 1px solid rgba(0,0,0,0.04);
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(11,42,60,0.04);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.75rem;
+      border: none;
     }
     .dash-pipeline-title {
-      font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--text-light); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #6C6C70; margin-bottom: 1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
     }
+    .dash-pipeline-title-left { display: flex; align-items: center; gap: 0.5rem; }
+    .dash-pipeline-total {
+      font-size: 0.72rem; font-weight: 600; color: #8E8E93; text-transform: none; letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-pipeline-bar {
+      display: flex; gap: 3px; height: 10px; border-radius: 5px;
+      overflow: hidden; margin-bottom: 14px;
+      background: rgba(60, 60, 67, 0.08);
+    }
+    .dash-pipeline-bar .seg {
+      transition: opacity 0.2s, transform 0.2s cubic-bezier(.2,.8,.2,1);
+      cursor: pointer;
+    }
+    .dash-pipeline-bar .seg:hover { opacity: 0.85; transform: scaleY(1.15); }
     .dash-funnel {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 2px;
+      gap: 6px;
     }
     .dash-funnel-stage {
       min-width: 0; padding: 0.85rem 0.5rem; text-align: center;
-      cursor: pointer; position: relative; transition: all 0.15s; border-radius: 0;
+      cursor: pointer; position: relative; transition: background 0.15s;
+      border-radius: 10px;
+      background: rgba(60, 60, 67, 0.04);
     }
-    .dash-funnel-stage:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-    .dash-funnel-stage:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-    /* Funnel wraps to 2 rows of 4 on medium-narrow screens */
     @media (max-width: 1100px) {
       .dash-funnel {
         grid-template-columns: repeat(4, 1fr);
-        gap: 4px;
       }
-      .dash-funnel-stage { border-radius: 8px !important; }
     }
-    .dash-funnel-stage:hover { filter: brightness(0.95); }
+    .dash-funnel-stage:hover { background: rgba(60, 60, 67, 0.08); }
     .dash-funnel-count {
-      font-size: 1.4rem; font-weight: 700; font-family: 'JetBrains Mono', 'Inter', monospace; line-height: 1.2;
+      font-size: 1.5rem; font-weight: 700;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+      color: #1C1C1E;
     }
     .dash-funnel-label {
-      font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 3px; opacity: 0.7;
+      font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+      margin-top: 4px; color: #6C6C70;
     }
     .dash-funnel-dot {
-      width: 6px; height: 6px; border-radius: 50%; margin: 0 auto 6px; opacity: 0.7;
+      width: 6px; height: 6px; border-radius: 50%; margin: 0 auto 6px;
     }
     .dash-charts-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 1.5rem; margin-bottom: 1.75rem;
+      gap: 1.25rem; margin-bottom: 1.75rem;
     }
     .dash-chart-card {
-      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-      padding: 1.5rem; border: 1px solid rgba(0,0,0,0.04);
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(11,42,60,0.04);
+      padding: 1.5rem; border: none;
     }
     .dash-chart-card-title {
-      font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-      color: var(--primary-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #6C6C70; margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: 0.5rem;
     }
-    .dash-chart-canvas { position: relative; height: 220px; }
+    .dash-chart-canvas { position: relative; height: 240px; }
     .dash-actions-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 0.75rem; margin-bottom: 1.75rem;
@@ -4305,6 +4358,14 @@
     .login-logo {
       text-align: center;
       margin-bottom: 1.75rem;
+    }
+    .login-logo-img {
+      width: 64px; height: 64px;
+      object-fit: contain;
+      margin-bottom: 0.75rem;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
     .login-logo-icon {
       width: 56px; height: 56px;

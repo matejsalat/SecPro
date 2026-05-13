@@ -335,15 +335,25 @@ async function handleSendResetCode(req, res) {
       body: JSON.stringify({
         from: 'SecPro <onboarding@resend.dev>',
         to: [email],
-        subject: 'SecPro — Kód na obnovenie hesla',
+        subject: 'SecPro — Password reset code',
         html: `
-          <div style="font-family:Arial,sans-serif;max-width:400px;margin:0 auto;padding:24px">
-            <h2 style="color:#0B2A3C;margin-bottom:8px">SecPro</h2>
-            <p style="color:#666;margin-bottom:24px">Váš kód na obnovenie hesla:</p>
-            <div style="background:#f0f2f5;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px">
-              <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0B2A3C">${code}</span>
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #E5E9F0">
+            <div style="background:linear-gradient(135deg,#0B2A3C 0%,#1A7A8A 100%);padding:24px;text-align:center;color:#fff">
+              <img src="data:image/png;base64,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"
+                   alt="SecPro" width="48" height="48" style="display:block;margin:0 auto 12px;">
+              <div style="font-size:22px;font-weight:700;letter-spacing:1px">SECPRO</div>
             </div>
-            <p style="color:#999;font-size:13px">Kód platí 10 minút. Ak ste o reset nepožiadali, ignorujte tento email.</p>
+            <div style="padding:32px 24px;text-align:center">
+              <h2 style="color:#0B2A3C;margin:0 0 8px;font-size:20px;font-weight:600">Password reset code</h2>
+              <p style="color:#666;margin:0 0 24px;font-size:14px">Use the code below to reset your password:</p>
+              <div style="background:#f0f2f5;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+                <span style="font-size:36px;font-weight:700;letter-spacing:10px;color:#0B2A3C;font-family:'SF Mono',Menlo,monospace">${code}</span>
+              </div>
+              <p style="color:#999;font-size:13px;margin:0">This code is valid for 10 minutes. If you did not request a reset, you can safely ignore this email.</p>
+            </div>
+            <div style="background:#FAFBFC;padding:16px;text-align:center;color:#999;font-size:12px;border-top:1px solid #E5E9F0">
+              SecPro · The workbench for modern real estate agents
+            </div>
           </div>
         `,
       }),
