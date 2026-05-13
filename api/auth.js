@@ -49,6 +49,7 @@ module.exports = async (req, res) => {
       case 'reset-pw':          return await handleResetPw(req, res, KV_URL, KV_TOKEN);
       case 'send-reset-code':   return await handleSendResetCode(req, res);
       case 'verify-reset-code': return await handleVerifyResetCode(req, res, KV_URL, KV_TOKEN);
+      case 'update-prefs':      return await handleUpdatePrefs(req, res, KV_URL, KV_TOKEN);
       default:
         return res.status(400).json({ error: 'Neznáma akcia: ' + action });
     }
@@ -157,12 +158,43 @@ async function handleLogin(req, res, KV_URL, KV_TOKEN) {
     return res.status(200).json({
       success: true,
       token,
-      user: { name: user.name, email: user.email },
+      user: { name: user.name, email: user.email, language: user.language || 'sk' },
       expiresAt,
     });
   } catch (err) {
     console.error('auth login error:', err.message);
     return res.status(500).json({ error: 'Chyba servera pri prihlásení.' });
+  }
+}
+
+// ── UPDATE USER PREFS (language, future settings) ──
+async function handleUpdatePrefs(req, res, KV_URL, KV_TOKEN) {
+  const { token, language } = req.body;
+  if (!token) return res.status(401).json({ error: 'Token chýba.' });
+
+  try {
+    const session = await kvGet(KV_URL, KV_TOKEN, `session:${token}`);
+    if (!session) return res.status(401).json({ error: 'Sedenie vypršalo.' });
+    if (new Date(session.expiresAt) < new Date()) {
+      await kvDel(KV_URL, KV_TOKEN, `session:${token}`);
+      return res.status(401).json({ error: 'Sedenie vypršalo.' });
+    }
+
+    const userKey = `user:${session.email}`;
+    const user = await kvGet(KV_URL, KV_TOKEN, userKey);
+    if (!user) return res.status(404).json({ error: 'Účet nenájdený.' });
+
+    // Whitelist of pref fields — only allow known keys to be saved
+    if (language && ['sk', 'en'].includes(language)) {
+      user.language = language;
+    }
+    user.updatedAt = new Date().toISOString();
+
+    await kvSet(KV_URL, KV_TOKEN, userKey, user);
+    return res.status(200).json({ success: true, user: { language: user.language || 'sk' } });
+  } catch (err) {
+    console.error('auth update-prefs error:', err.message);
+    return res.status(500).json({ error: 'Chyba servera.' });
   }
 }
 
@@ -180,9 +212,17 @@ async function handleSession(req, res, KV_URL, KV_TOKEN) {
       return res.status(401).json({ error: 'Sedenie vypršalo.' });
     }
 
+    // Pull fresh language from user record (session is cached, prefs may have changed)
+    let language = 'sk';
+    try {
+      const userKey = `user:${session.email}`;
+      const user = await kvGet(KV_URL, KV_TOKEN, userKey);
+      if (user && user.language) language = user.language;
+    } catch {}
+
     return res.status(200).json({
       success: true,
-      user: { name: session.name, email: session.email },
+      user: { name: session.name, email: session.email, language },
     });
   } catch (err) {
     console.error('auth session error:', err.message);

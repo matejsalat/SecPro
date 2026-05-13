@@ -10612,6 +10612,10 @@ async function validateSession() {
       return null;
     }
     const data = await res.json();
+    // Apply server-stored language preference if it differs from what we have locally
+    if (data.user && data.user.language && window.i18n && window.i18n.getLang() !== data.user.language) {
+      window.i18n.setLang(data.user.language);
+    }
     return data.user || null;
   } catch {
     // Offline fallback — trust local cache
@@ -10714,6 +10718,10 @@ async function handleLogin(e) {
     }
 
     saveAuthLocal(data.token, data.user, remember);
+    // Apply server-stored language preference (falls back to 'sk')
+    if (data.user && data.user.language && window.i18n) {
+      window.i18n.setLang(data.user.language);
+    }
     enterApp(data.user, true);
     // Migrate local data then load server data
     await migrateLocalData();
@@ -10874,6 +10882,12 @@ function openProfileModal() {
   document.querySelectorAll('#profile-specializations input[type="checkbox"]').forEach(cb => {
     cb.checked = specs.includes(cb.value);
   });
+  // Language toggle — reflect current session language (falls back to localStorage / 'sk')
+  try {
+    const currentLang = (window.i18n && window.i18n.getLang()) || storedUser.language || 'sk';
+    const radio = document.querySelector(`input[name="profile-language"][value="${currentLang}"]`);
+    if (radio) radio.checked = true;
+  } catch {}
   _refreshProfileAvatarPreview();
   _refreshProfileSignaturePreview();
   document.getElementById('profile-modal').style.display = 'block';
@@ -11015,9 +11029,34 @@ function saveProfile() {
   if (_profileSignatureTemp === '') delete profile.signature;
   saveProfileData(profile);
   applyProfileToHeader();
+
+  // Persist language preference to backend (best-effort — UI already switched)
+  const langRadio = document.querySelector('input[name="profile-language"]:checked');
+  if (langRadio && window.i18n) {
+    const lang = langRadio.value;
+    window.i18n.setLang(lang);
+    try {
+      const token = (typeof getStoredToken === 'function') ? getStoredToken() : null;
+      if (token) {
+        fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update-prefs', token, language: lang }),
+        }).catch(() => {});
+      }
+    } catch {}
+  }
+
   closeProfileModal();
-  if (typeof showToast === 'function') showToast('Profil uložený', 'success');
+  if (typeof showToast === 'function') showToast((window.t ? t('profile.saved') : 'Profil uložený'), 'success');
 }
+
+// Live preview when user toggles the language radio inside the profile modal
+document.addEventListener('change', (e) => {
+  if (e.target && e.target.name === 'profile-language' && window.i18n) {
+    window.i18n.setLang(e.target.value);
+  }
+});
 
 // Live-update header preview as user types
 document.addEventListener('input', (e) => {
