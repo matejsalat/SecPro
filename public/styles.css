@@ -3639,25 +3639,43 @@
       gap: 1rem;
       margin-bottom: 2rem;
     }
-    /* ===== APPLE HEALTH STYLE DASHBOARD ===== */
+    /* ===== DEEP-TECH DASHBOARD ===== */
     .stat-card {
       background: #FFFFFF;
-      border-radius: 16px;
-      padding: 1.25rem 1.4rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(11,42,60,0.04);
+      border-radius: 18px;
+      padding: 1.35rem 1.5rem;
+      box-shadow:
+        0 1px 2px rgba(11,42,60,0.04),
+        0 8px 28px rgba(11,42,60,0.06),
+        inset 0 0 0 1px rgba(11,42,60,0.04);
       display: flex;
       align-items: center;
       gap: 1rem;
       border: none;
       position: relative;
       overflow: hidden;
+      backdrop-filter: blur(8px);
+      transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s, border-color 0.25s;
+    }
+    /* Animated gradient accent line at top of each stat card */
+    .stat-card::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--card-tint, #2EC4D4), transparent);
+      opacity: 0.7;
+      animation: dt-shimmer 6s ease-in-out infinite;
+    }
+    @keyframes dt-shimmer {
+      0%, 100% { transform: translateX(-30%); opacity: 0; }
+      50%      { transform: translateX(0);    opacity: 0.7; }
     }
     .stat-card::before {
       content: '';
       position: absolute;
       inset: 0;
-      background: var(--card-tint, transparent);
-      opacity: 0.035;
+      background: radial-gradient(circle at 88% 12%, var(--card-tint, transparent) 0%, transparent 50%);
+      opacity: 0.08;
       pointer-events: none;
     }
     .stat-icon {
@@ -3674,19 +3692,49 @@
     .stat-icon.violet { background: linear-gradient(135deg, #F0EDFF, #DDD6FE); color: #6B46C1; }
     .stat-info { display: flex; flex-direction: column; position: relative; z-index: 1; }
     .stat-value {
-      font-size: 1.65rem; font-weight: 700;
-      color: #1C1C1E;
-      line-height: 1.1;
-      letter-spacing: -0.02em;
+      font-size: 1.75rem; font-weight: 800;
+      color: #0B2A3C;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
       font-variant-numeric: tabular-nums;
-      font-feature-settings: 'tnum';
+      font-feature-settings: 'tnum', 'cv11';
+      display: inline-flex; align-items: baseline; gap: 4px;
+      background: linear-gradient(135deg, var(--card-tint, #0B2A3C) 0%, #0B2A3C 70%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stat-value .unit {
+      font-size: 0.7em; opacity: 0.7; font-weight: 600;
+      -webkit-text-fill-color: currentColor; color: #6C6C70;
     }
     .stat-label {
-      font-size: 0.7rem; color: #6C6C70; font-weight: 600; margin-top: 4px;
-      text-transform: uppercase; letter-spacing: 0.04em;
+      font-size: 0.68rem; color: #6C6C70; font-weight: 700; margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.08em;
     }
-    .stat-card.clickable { cursor: pointer; transition: transform 0.2s cubic-bezier(.2,.8,.2,1), box-shadow 0.2s; }
-    .stat-card.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.04), 0 8px 24px rgba(11,42,60,0.08); }
+    .stat-trend {
+      font-size: 0.7rem; font-weight: 700; margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .stat-trend.up   { color: #00A36A; }
+    .stat-trend.down { color: #C0392B; }
+    .stat-trend.flat { color: #8E8E93; }
+    .stat-spark {
+      position: absolute; right: 16px; bottom: 12px;
+      height: 32px; width: 80px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    .stat-card.clickable { cursor: pointer; }
+    .stat-card.clickable:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 1px 2px rgba(11,42,60,0.06),
+        0 16px 40px rgba(11,42,60,0.10),
+        inset 0 0 0 1px var(--card-tint, rgba(46,196,212,0.25));
+    }
+    .stat-card.clickable:hover .stat-spark { opacity: 0.9; }
 
     /* Pipeline — segmented progress bar + cells below */
     .dash-pipeline {
@@ -3764,6 +3812,88 @@
       display: flex; align-items: center; gap: 0.5rem;
     }
     .dash-chart-canvas { position: relative; height: 240px; }
+
+    /* Deep-tech activity heatmap (30-day grid) */
+    .dash-heatmap-card {
+      background: linear-gradient(135deg, #FFFFFF 0%, #FAFCFD 100%);
+      border-radius: 18px;
+      box-shadow:
+        0 1px 2px rgba(11,42,60,0.04),
+        0 8px 28px rgba(11,42,60,0.06),
+        inset 0 0 0 1px rgba(11,42,60,0.04);
+      padding: 1.5rem 1.75rem; margin-bottom: 1.75rem;
+    }
+    .dash-heatmap-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1rem;
+    }
+    .dash-heatmap-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #6C6C70; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dash-heatmap-sum {
+      font-size: 0.75rem; color: #6C6C70; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(30, 1fr);
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .dash-heatmap-cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      background: rgba(60, 60, 67, 0.05);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+      position: relative;
+    }
+    .dash-heatmap-cell:hover {
+      transform: scale(1.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      z-index: 2;
+    }
+    .dash-heatmap-cell[data-level="1"] { background: rgba(46, 196, 212, 0.18); }
+    .dash-heatmap-cell[data-level="2"] { background: rgba(46, 196, 212, 0.42); }
+    .dash-heatmap-cell[data-level="3"] { background: rgba(46, 196, 212, 0.68); }
+    .dash-heatmap-cell[data-level="4"] { background: linear-gradient(135deg, #2EC4D4, #1A7A8A); box-shadow: 0 0 8px rgba(46,196,212,0.45); }
+    .dash-heatmap-legend {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 6px; font-size: 0.65rem; color: #8E8E93;
+      font-variant-numeric: tabular-nums;
+    }
+    .dash-heatmap-legend .swatches { display: flex; gap: 3px; }
+    .dash-heatmap-legend .swatches > div {
+      width: 10px; height: 10px; border-radius: 2px;
+    }
+
+    /* Live-data ticker dot — pulses to signal "real-time" feel */
+    .dash-live-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #00A36A;
+      box-shadow: 0 0 0 0 rgba(0, 163, 106, 0.5);
+      animation: dt-pulse 1.8s ease-in-out infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes dt-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(0, 163, 106, 0.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(0, 163, 106, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 163, 106, 0); }
+    }
+
+    /* Pipeline-bar animation on first render */
+    .dash-pipeline-bar .seg { animation: dt-grow 0.7s cubic-bezier(.2,.8,.2,1) backwards; }
+    @keyframes dt-grow {
+      from { flex-grow: 0; opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* Counter animation hint — handled in JS, but starting state hidden */
+    .stat-value[data-animate-from] { transition: none; }
     .dash-actions-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 0.75rem; margin-bottom: 1.75rem;

@@ -140,6 +140,17 @@ const fmt = (n) => new Intl.NumberFormat('sk-SK', { minimumFractionDigits: 2, ma
 const fmtInt = (n) => new Intl.NumberFormat('sk-SK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 const fmtDec = (n, d) => n.toFixed(d).replace('.', ',');
 
+// Backend error → display string. Prefers `errorKey` (translatable) over raw `error` (SK only).
+function errMsg(data, fallback) {
+  if (!data) return fallback || (window.t ? t('toast.error_generic') : 'Niečo sa pokazilo.');
+  if (data.errorKey && window.t) {
+    const translated = t(data.errorKey);
+    // If t() returned the key itself, the key isn't in the dict — fall through to error
+    if (translated !== data.errorKey) return translated;
+  }
+  return data.error || fallback || (window.t ? t('toast.error_generic') : 'Niečo sa pokazilo.');
+}
+
 let charts = {};
 function getOrCreateChart(canvasId, config) {
   if (charts[canvasId]) charts[canvasId].destroy();
@@ -1412,7 +1423,7 @@ function saveAnalysis(type) {
     data = { inputs: collectMetInputs(), sums: metLastData.sums, totalInput: metLastData.totalInput };
     autoName = 'Porovnanie bánk - ' + fmt(metLastData.totalInput) + ' EUR';
   }
-  if (!data) { showToast('Najprv spravte výpočet!', true); return; }
+  if (!data) { showToast(t('toast.najprv_spravte_vypocet'), true); return; }
   // Remove schedule arrays to save space
   if (data.result && data.result.schedule) delete data.result.schedule;
   const hist = getHistory();
@@ -1423,7 +1434,7 @@ function saveAnalysis(type) {
       hist[idx].data = data;
       hist[idx].date = now;
       setHistory(hist);
-      showToast('Analýza aktualizovaná!');
+      showToast(t('toast.analyza_aktualizovana'));
       return;
     }
   }
@@ -1433,7 +1444,7 @@ function saveAnalysis(type) {
   setHistory(hist);
   updateSaveBtnLabel(type, true);
   showNewAnalysisBtn(type, true);
-  showToast('Analýza uložená!');
+  showToast(t('toast.analyza_ulozena'));
 }
 
 function collectMhInputs() {
@@ -1494,7 +1505,7 @@ function renameAnalysis(id) {
       entry.name = newName.trim();
       setHistory(hist);
       renderHistory();
-      showToast('Analýza premenovaná!');
+      showToast(t('toast.analyza_premenovana'));
     }
   });
 }
@@ -1507,7 +1518,7 @@ function confirmDeleteAnalysis(id) {
     const newHist = hist.filter(e => e.id !== id);
     setHistory(newHist);
     renderHistory();
-    showToast('Analýza vymazaná!');
+    showToast(t('toast.analyza_vymazana'));
   });
 }
 
@@ -1518,7 +1529,7 @@ function loadAnalysis(id) {
   const entry = hist.find(e => e.id === id);
   if (!entry) return;
   const inputs = entry.data.inputs;
-  if (!inputs) { showToast('Chyba: dáta nie sú dostupné', true); return; }
+  if (!inputs) { showToast(t('toast.chyba_data_nie_su_dostupne'), true); return; }
   window.activeHistoryId = id;
 
   if (entry.type === 'mhypoteka') {
@@ -1550,7 +1561,7 @@ function loadAnalysis(id) {
   }
   updateSaveBtnLabel(entry.type, true);
   showNewAnalysisBtn(entry.type, true);
-  showToast('Analýza načítaná!');
+  showToast(t('toast.analyza_nacitana'));
 }
 
 function updateSaveBtnLabel(type, isUpdate) {
@@ -1597,7 +1608,7 @@ function startNewAnalysis(type) {
   if (type === 'mhypoteka-rovne') { document.getElementById('rs-results').innerHTML = ''; document.getElementById('rs-save-btn').style.display = 'none'; rsLastData = null; }
   if (type === 'mhypoteka-klesajuce') { document.getElementById('ks-results').innerHTML = ''; document.getElementById('ks-save-btn').style.display = 'none'; ksLastData = null; }
   if (type === 'metodika') { document.querySelectorAll('.met-input').forEach(function(inp) { inp.value = 0; }); calcMetodika(); metLastData = null; }
-  showToast('Pripravené na novú analýzu');
+  showToast(t('toast.pripravene_na_novu_analyzu'));
 }
 
 function showModal(title, desc, currentVal, onSave) {
@@ -3726,7 +3737,7 @@ function saveDealFromEditor() {
   saveProperties(props);
   closeDealStatusEditor();
   if (typeof renderProperties === 'function') renderProperties();
-  showToast('Stav obchodu uložený ✓', 'success');
+  showToast(t('toast.stav_obchodu_ulozeny'), 'success');
 }
 
 // Legacy status mapping (backward compat)
@@ -5155,7 +5166,7 @@ async function saveNabor(opts) {
   const prefix = type === 'byt' ? 'nb' : 'nd';
   const formData = _naborReadFormData(prefix);
   if (!formData) {
-    if (!opts.silent) showToast('Nepodarilo sa prečítať údaje', 'error');
+    if (!opts.silent) showToast(t('toast.nepodarilo_sa_precitat_udaje'), 'error');
     return;
   }
 
@@ -5442,7 +5453,7 @@ async function unlockNabor(propId) {
   }
   if (typeof renderProperties === 'function') renderProperties();
 
-  showToast('Dokument je znova editovateľný. Po úprave odošlite klientovi nový odkaz na podpis.', 'info');
+  showToast(t('toast.dokument_je_znova_editovatelny_po_uprave'), 'info');
 }
 
 function _applyNaborLockState(p) {
@@ -6827,14 +6838,14 @@ function submitReminderFromForm(propertyId) {
   if (!textInput || !dateInput) return;
   const text = (textInput.value || '').trim();
   const dueAt = dateInput.value;  // ISO local datetime from <input type="datetime-local">
-  if (!text) { showToast('Vyplňte text pripomienky', 'warning'); return; }
-  if (!dueAt) { showToast('Vyplňte dátum a čas', 'warning'); return; }
+  if (!text) { showToast(t('toast.vyplnte_text_pripomienky'), 'warning'); return; }
+  if (!dueAt) { showToast(t('toast.vyplnte_datum_a_cas'), 'warning'); return; }
   // Convert "2026-05-12T14:00" (local) to a real ISO timestamp
   const isoDue = new Date(dueAt).toISOString();
   addReminder(propertyId, text, isoDue);
   textInput.value = '';
   dateInput.value = '';
-  showToast('Pripomienka pridaná', 'success');
+  showToast(t('toast.pripomienka_pridana'), 'success');
 }
 
 // Start the auto-check loop. Every 60s scans for newly-due reminders
@@ -7258,7 +7269,7 @@ function startInlinePriceEdit(span, propId) {
       // Invalid → revert + toast
       span.textContent = originalText;
       span.classList.remove('is-editing');
-      showToast('Neplatná cena', 'error');
+      showToast(t('toast.neplatna_cena'), 'error');
       return;
     }
     // No change → just revert visual without saving
@@ -7275,7 +7286,7 @@ function startInlinePriceEdit(span, propId) {
     saveProperties(props);
     // Re-render so price label, sorting, map markers all update consistently
     renderProperties();
-    if (typeof showToast === 'function') showToast('Cena uložená', 'success');
+    if (typeof showToast === 'function') showToast(t('toast.cena_ulozena'), 'success');
   };
 
   const cancel = () => {
@@ -7578,7 +7589,7 @@ async function bulkLeonisPublish() {
   if (selected.length === 0) return;
   const toPublish = selected.filter(p => !p.leonisPublished && !INACTIVE_STATUSES.includes(p.status));
   if (toPublish.length === 0) {
-    showToast('Vybrané nehnuteľnosti sú už publikované alebo neaktívne', 'warning');
+    showToast(t('toast.vybrane_nehnutelnosti_su_uz_publikovane_alebo'), 'warning');
     return;
   }
   if (!await secConfirm({
@@ -7600,7 +7611,7 @@ async function bulkLeonisUnpublish() {
   if (selected.length === 0) return;
   const toUnpublish = selected.filter(p => p.leonisPublished);
   if (toUnpublish.length === 0) {
-    showToast('Žiadna z vybraných nie je publikovaná', 'warning');
+    showToast(t('toast.ziadna_z_vybranych_nie_je_publikovana'), 'warning');
     return;
   }
   if (!await secConfirm({
@@ -7908,7 +7919,7 @@ async function _doRefreshPOILayer() {
   // city level so the feature does something useful immediately.
   const zoom = _propertiesMap.getZoom();
   if (zoom < 11) {
-    showToast('Priblížil som mapu — POI sa zobrazujú od mestského zoomu.', 'info');
+    showToast(t('toast.priblizil_som_mapu_poi_sa_zobrazuju'), 'info');
     _propertiesMap.setZoom(13, { animate: true });
     // moveend will trigger another refresh once the zoom settles
     return;
@@ -7930,7 +7941,7 @@ async function _doRefreshPOILayer() {
   if (sizePx.x === 0 || sizePx.y === 0 || !validBox) {
     console.warn('[SecPro POI] Invalid map state — size:', sizePx, 'bbox:', { south, west, north, east });
     _showPOIBusy('Mapa sa ešte načítava... skúste znova o chvíľu');
-    showToast('Mapa nie je ešte pripravená — počkajte sekundu a skúste znova', 'warning');
+    showToast(t('toast.mapa_nie_je_este_pripravena_pockajte'), 'warning');
     return;
   }
   // Round bbox so cache hits across small pans
@@ -7961,7 +7972,7 @@ async function _doRefreshPOILayer() {
     results = await Promise.all(fetches);
   } catch (e) {
     console.error('[SecPro POI] fetch error:', e);
-    showToast('Chyba pri načítavaní POI', 'error');
+    showToast(t('toast.chyba_pri_nacitavani_poi'), 'error');
     _hidePOIBusy();
     return;
   }
@@ -7983,7 +7994,7 @@ async function _doRefreshPOILayer() {
   _hidePOIBusy();
 
   if (totalCount === 0) {
-    showToast('V tomto výseku sa nenašli žiadne POI — skúste posunúť mapu alebo zväčšiť výsek', 'warning');
+    showToast(t('toast.v_tomto_vyseku_sa_nenasli_ziadne'), 'warning');
   } else {
     console.log('[SecPro POI] plotted', totalCount, 'POIs across', activeCats.length, 'categories at zoom', zoom);
   }
@@ -8105,12 +8116,12 @@ async function _doMapSearch(query) {
   const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1';
   try {
     const r = await fetch(url, { headers: { 'Accept-Language': 'sk' } });
-    if (!r.ok) { showToast('Adresu sa nepodarilo nájsť', 'warning'); return; }
+    if (!r.ok) { showToast(t('toast.adresu_sa_nepodarilo_najst'), 'warning'); return; }
     const data = await r.json();
-    if (!data || !data.length) { showToast('Adresu sa nepodarilo nájsť', 'warning'); return; }
+    if (!data || !data.length) { showToast(t('toast.adresu_sa_nepodarilo_najst'), 'warning'); return; }
     const lat = parseFloat(data[0].lat);
     const lng = parseFloat(data[0].lon);
-    if (!isFinite(lat) || !isFinite(lng)) { showToast('Adresu sa nepodarilo nájsť', 'warning'); return; }
+    if (!isFinite(lat) || !isFinite(lng)) { showToast(t('toast.adresu_sa_nepodarilo_najst'), 'warning'); return; }
     // Make sure Leaflet has the right size before any pan/zoom — flyTo
     // throws "Invalid LatLng (NaN)" if the map container size isn't
     // properly known yet (it does an unproject internally).
@@ -8133,7 +8144,7 @@ async function _doMapSearch(query) {
     _propMapSearchMarker.bindPopup('<b>' + esc(data[0].display_name || query) + '</b>').openPopup();
   } catch (e) {
     console.error('[SecPro] map search error:', e);
-    showToast('Chyba pri vyhľadávaní adresy', 'error');
+    showToast(t('toast.chyba_pri_vyhladavani_adresy'), 'error');
   }
 }
 
@@ -8240,7 +8251,7 @@ function initPropertiesMap() {
       if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
           _propMapPOICache = {};   // wipe cache so a stale empty doesn't haunt us
-          showToast('POI cache vyčistená — fetchujem znova...', 'info');
+          showToast(t('toast.poi_cache_vycistena_fetchujem_znova'), 'info');
           _doRefreshPOILayer();
         });
       }
@@ -9721,7 +9732,7 @@ function closeClientForm() {
 
 function saveClient() {
   const name = document.getElementById('client-name').value.trim();
-  if (!name) { alert('Vyplňte meno klienta.'); return; }
+  if (!name) { alert(t('toast.vyplnte_meno_klienta')); return; }
 
   const editId = document.getElementById('client-edit-id').value;
   const clients = getClients();
@@ -9757,7 +9768,7 @@ async function deleteClient(id, ev) {
   if (ev) ev.stopPropagation();
   const ok = (typeof secConfirm === 'function')
     ? await secConfirm({ message: 'Naozaj chcete odstrániť tohto klienta?', type: 'danger', ok: 'Odstrániť' })
-    : confirm('Naozaj chcete odstrániť tohto klienta?');
+    : confirm(t('toast.naozaj_chcete_odstranit_tohto_klienta'));
   if (!ok) return;
   saveClients(getClients().filter(c => c.id !== id));
   renderClients();
@@ -10493,7 +10504,7 @@ async function secureFetch(url, options) {
     _redirectingToLogin = true;
     clearSession();
     document.getElementById('loginOverlay').classList.remove('hidden');
-    showToast('Relácia vypršala. Prihláste sa znova.', 'warning');
+    showToast(t('toast.relacia_vyprsala_prihlaste_sa_znova'), 'warning');
     setTimeout(() => { _redirectingToLogin = false; }, 3000);
   }
   return res;
@@ -10531,7 +10542,7 @@ async function _flushSaves() {
       if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
     if (!success) {
-      showToast('Ukladanie zlyhalo. Dáta sú uložené lokálne.', 'warning');
+      showToast(t('toast.ukladanie_zlyhalo_data_su_ulozene_lokalne'), 'warning');
     }
   }
 }
@@ -10688,7 +10699,7 @@ async function handleRegister(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showLoginError(data.error || 'Registrácia zlyhala.');
+      showLoginError(errMsg(data, 'Registrácia zlyhala.'));
       return;
     }
 
@@ -10724,7 +10735,7 @@ async function handleLogin(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showLoginError(data.error || 'Prihlásenie zlyhalo.');
+      showLoginError(errMsg(data, 'Prihlásenie zlyhalo.'));
       return;
     }
 
@@ -10765,7 +10776,7 @@ async function handleForgotSendCode(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showLoginError((data.error || 'Nepodarilo sa odoslať kód.') + (data.detail ? ' (' + data.detail + ')' : ''));
+      showLoginError((errMsg(data, 'Nepodarilo sa odoslať kód.')) + (data.detail ? ' (' + data.detail + ')' : ''));
       btn.textContent = 'Odoslať kód';
       btn.disabled = false;
       return;
@@ -10801,7 +10812,7 @@ async function handleForgotVerify(e) {
     const data = await res.json();
 
     if (!res.ok) {
-      showLoginError(data.error || 'Overenie zlyhalo.');
+      showLoginError(errMsg(data, 'Overenie zlyhalo.'));
       return;
     }
 
@@ -10995,7 +11006,7 @@ async function handleProfileAvatarUpload(ev) {
     _refreshProfileAvatarPreview();
   } catch (e) {
     console.error('Avatar upload failed', e);
-    if (typeof showToast === 'function') showToast('Nepodarilo sa načítať fotku', 'error');
+    if (typeof showToast === 'function') showToast(t('toast.nepodarilo_sa_nacitat_fotku'), 'error');
   }
   ev.target.value = '';
 }
@@ -11008,8 +11019,8 @@ function removeProfileAvatar() {
 function saveProfile() {
   const name = document.getElementById('profile-name').value.trim();
   if (!name) {
-    if (typeof showToast === 'function') showToast('Zadajte celé meno', 'error');
-    else alert('Zadajte celé meno');
+    if (typeof showToast === 'function') showToast(t('toast.zadajte_cele_meno'), 'error');
+    else alert(t('toast.zadajte_cele_meno'));
     return;
   }
   const specs = Array.from(document.querySelectorAll('#profile-specializations input[type="checkbox"]:checked')).map(cb => cb.value);
@@ -12406,6 +12417,92 @@ function exportSavedLeadsCSV() {
 }
 
 // ==================== DASHBOARD ====================
+// Deep-tech: animate a numeric counter from current → target over 700ms
+function animateCounter(el, target) {
+  if (!el || typeof target !== 'number') return;
+  const current = parseInt(el.textContent.replace(/\D/g, ''), 10) || 0;
+  if (current === target) { el.textContent = String(target); return; }
+  const duration = 700;
+  const startTime = performance.now();
+  const startValue = current;
+  function step(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    // easeOutQuart for snappy finish
+    const eased = 1 - Math.pow(1 - t, 4);
+    const value = Math.round(startValue + (target - startValue) * eased);
+    el.textContent = String(value);
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = String(target);
+  }
+  requestAnimationFrame(step);
+}
+
+// Deep-tech: 30-day activity heatmap. Reuses property + AML history.
+function renderDashHeatmap(props, amlRecords) {
+  const grid = document.getElementById('dash-heatmap-grid');
+  const sumEl = document.getElementById('dash-heatmap-sum');
+  if (!grid) return;
+
+  // Build a daily count of "any activity" for last 30 days
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dayMs = 86400000;
+  const counts = new Array(30).fill(0);
+  const labelFor = i => {
+    const d = new Date(today.getTime() - (29 - i) * dayMs);
+    return d.toLocaleDateString(window.i18n && window.i18n.getLang() === 'en' ? 'en-GB' : 'sk-SK',
+      { day: '2-digit', month: 'short' });
+  };
+
+  function bucketDate(dateStr) {
+    if (!dateStr) return -1;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return -1;
+    d.setHours(0, 0, 0, 0);
+    const diff = Math.round((today - d) / dayMs);
+    if (diff < 0 || diff >= 30) return -1;
+    return 29 - diff;
+  }
+
+  (props || []).forEach(p => {
+    // Viewings
+    (p.viewings || []).forEach(v => {
+      const idx = bucketDate(v.date || v.dateTime || v.createdAt);
+      if (idx >= 0) counts[idx]++;
+    });
+    // Property creation / updates
+    const idx = bucketDate(p.updatedAt || p.createdAt);
+    if (idx >= 0) counts[idx]++;
+  });
+  (amlRecords || []).forEach(r => {
+    const idx = bucketDate(r.updatedAt || r.createdAt || r.date);
+    if (idx >= 0) counts[idx]++;
+  });
+
+  // Quartiles for color levels
+  const maxCount = Math.max(1, ...counts);
+  function levelFor(n) {
+    if (n === 0) return 0;
+    const r = n / maxCount;
+    if (r < 0.25) return 1;
+    if (r < 0.5) return 2;
+    if (r < 0.8) return 3;
+    return 4;
+  }
+
+  grid.innerHTML = counts.map((n, i) => {
+    const lvl = levelFor(n);
+    const lbl = labelFor(i);
+    return `<div class="dash-heatmap-cell" data-level="${lvl}" title="${lbl}: ${n}"></div>`;
+  }).join('');
+
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (sumEl) {
+    const eventsLbl = window.t ? t('home.heatmap.events') : 'aktivít';
+    sumEl.textContent = `${total} ${eventsLbl}`;
+  }
+}
+
 function renderDashboard() {
   const props = getProperties();
   const contacts = getContacts();
@@ -12417,25 +12514,29 @@ function renderDashboard() {
   const totalViewings = props.reduce((sum, p) => sum + ((p.viewings || []).length), 0);
   const portfolioValue = activeProps.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
 
-  document.getElementById('dash-active-count').textContent = activeProps.length;
-  document.getElementById('dash-portfolio-value').textContent = portfolioValue > 0
+  animateCounter(document.getElementById('dash-active-count'), activeProps.length);
+  const portfolioText = portfolioValue > 0
     ? (portfolioValue >= 1000000
       ? (portfolioValue / 1000000).toFixed(1).replace('.', ',') + ' M\u20AC'
       : portfolioValue.toLocaleString('sk-SK') + ' \u20AC')
     : '0 \u20AC';
-  document.getElementById('dash-viewings-count').textContent = totalViewings;
-  document.getElementById('dash-sold-count').textContent = soldProps.length;
+  document.getElementById('dash-portfolio-value').textContent = portfolioText;
+  animateCounter(document.getElementById('dash-viewings-count'), totalViewings);
+  animateCounter(document.getElementById('dash-sold-count'), soldProps.length);
 
   // --- AML KPI ---
   const amlRecords = typeof getAmlRecords === 'function' ? getAmlRecords() : [];
   const amlPending = amlRecords.filter(r => r.status === 'pending' || r.status === 'flagged').length;
-  document.getElementById('dash-aml-pending').textContent = amlPending;
+  animateCounter(document.getElementById('dash-aml-pending'), amlPending);
 
   // --- Pipeline Funnel ---
   renderDashPipeline(props);
 
   // --- Charts ---
   renderDashCharts(props);
+
+  // --- 30-day Activity Heatmap (deep-tech ticker) ---
+  renderDashHeatmap(props, amlRecords);
 
   // --- Lead Metrics ---
   renderDashLeadMetrics();
@@ -12584,8 +12685,20 @@ function dashFilterByStatus(status) {
 function renderDashCharts(props) {
   const active = props.filter(p => p.status !== 'zamietnuty' && p.status !== 'stiahnuta');
 
-  // Apple-style palette (matches stat-card tints + SecPro cyan)
-  const APPLE_PALETTE = ['#2EC4D4', '#0066CC', '#6B46C1', '#B07000', '#E8734A', '#34C759'];
+  // Deep-tech palette — saturated, vibrant, matches stat-card tints + SecPro cyan
+  const APPLE_PALETTE = ['#2EC4D4', '#0066CC', '#6B46C1', '#FF9F0A', '#E8734A', '#34C759'];
+
+  // Glow plugin for donut — paints a subtle radial glow behind segments
+  const dtGlowPlugin = {
+    id: 'dtGlow',
+    beforeDatasetsDraw(chart) {
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.shadowColor = 'rgba(46,196,212,0.35)';
+      ctx.shadowBlur = 18;
+    },
+    afterDatasetsDraw(chart) { chart.ctx.restore(); }
+  };
 
   // --- Doughnut: Property type distribution ---
   const typeCounts = {};
@@ -12629,8 +12742,8 @@ function renderDashCharts(props) {
           data: typeData,
           backgroundColor: APPLE_PALETTE.slice(0, typeLabels.length),
           borderWidth: 0,
-          hoverOffset: 8,
-          spacing: 2
+          hoverOffset: 12,
+          spacing: 3
         }]
       },
       options: {
@@ -12644,28 +12757,30 @@ function renderDashCharts(props) {
               padding: 14,
               usePointStyle: true,
               pointStyleWidth: 8,
-              color: '#1C1C1E'
+              color: '#0B2A3C'
             }
           },
           tooltip: {
-            backgroundColor: 'rgba(28, 28, 30, 0.92)',
+            backgroundColor: 'rgba(11, 42, 60, 0.95)',
             titleFont: { family: '-apple-system, Inter', size: 12, weight: 600 },
-            bodyFont: { family: '-apple-system, Inter', size: 13, weight: 700 },
-            cornerRadius: 8,
-            padding: 10,
-            displayColors: false,
+            bodyFont: { family: '-apple-system, Inter', size: 14, weight: 700 },
+            cornerRadius: 10,
+            padding: 12,
+            displayColors: true,
+            boxPadding: 4,
             callbacks: {
               label: function(ctx) {
                 const pct = typeTotal > 0 ? Math.round((ctx.parsed / typeTotal) * 100) : 0;
-                return ctx.parsed + ' · ' + pct + ' %';
+                return '  ' + ctx.parsed + ' · ' + pct + ' %';
               }
             }
           }
         },
-        cutout: '72%',
-        animation: { animateRotate: true, duration: 700, easing: 'easeOutQuart' }
+        cutout: '74%',
+        animation: { animateRotate: true, animateScale: true, duration: 900, easing: 'easeOutQuart' },
+        interaction: { mode: 'nearest', intersect: false }
       },
-      plugins: [centerLabelPlugin]
+      plugins: [centerLabelPlugin, dtGlowPlugin]
     });
   } else if (typeCanvas) {
     const msg = (window.t ? t('home.chart.empty') : 'Pridajte nehnuteľnosti pre zobrazenie grafu');
@@ -12934,7 +13049,7 @@ async function orsrSearch(type) {
     loadingEl.style.display = 'none';
 
     if (!res.ok) {
-      orsrShowError(data.error || 'Chyba pri vyhľadávaní');
+      orsrShowError(errMsg(data, 'Chyba pri vyhľadávaní'));
       return;
     }
 
@@ -13005,7 +13120,7 @@ async function orsrLoadDetail(id, sid, name) {
     loadingEl.style.display = 'none';
 
     if (!res.ok) {
-      orsrShowError(data.error || 'Chyba pri načítaní detailu');
+      orsrShowError(errMsg(data, 'Chyba pri načítaní detailu'));
       return;
     }
 
@@ -14757,8 +14872,8 @@ function _detachSigPadEvents() {
 async function confirmSignaturePad() {
   if (!_sigPadState) return;
   const name = document.getElementById('sig-signer-name').value.trim();
-  if (!name) { alert('Zadajte meno podpisujúceho.'); return; }
-  if (!_sigPadState.hasInk) { alert('Najprv sa podpíšte.'); return; }
+  if (!name) { alert(t('toast.zadajte_meno_podpisujuceho')); return; }
+  if (!_sigPadState.hasInk) { alert(t('toast.najprv_sa_podpiste')); return; }
   const dataUrl = _sigPadState.canvas.toDataURL('image/png');
   const saveToProfile = document.getElementById('sig-save-to-profile').checked;
   const ctx = _sigPadState.context;
@@ -14792,7 +14907,7 @@ async function confirmSignaturePad() {
   closeSignaturePad(true);
   _sigPadState = null;
   try { onConfirm(dataUrl, entry); } catch (e) { console.error(e); }
-  if (typeof showToast === 'function') showToast('Podpis zaznamenaný', 'success');
+  if (typeof showToast === 'function') showToast(t('toast.podpis_zaznamenany'), 'success');
 }
 
 // ==================== SIGNATURES HISTORY PAGE ====================
@@ -14871,7 +14986,7 @@ function viewSignatureEntry(id) {
 async function deleteSignatureEntry(id) {
   const ok = (typeof secConfirm === 'function')
     ? await secConfirm({ message: 'Naozaj chcete vymazať tento záznam podpisu? Audit stopa bude stratená.', type: 'danger', ok: 'Vymazať' })
-    : confirm('Vymazať tento podpis?');
+    : confirm(t('toast.vymazat_tento_podpis'));
   if (!ok) return;
   saveSignatures(getSignatures().filter(s => s.id !== id));
   renderSignatures();
@@ -15032,7 +15147,7 @@ function renderRemoteSignatures(items) {
 
 function copyText(text) {
   navigator.clipboard.writeText(text).then(() => {
-    showToast('Link skopírovaný do schránky!', 'success');
+    showToast(t('toast.link_skopirovany_do_schranky'), 'success');
   }).catch(() => {
     // Fallback
     const inp = document.createElement('input');
@@ -15041,7 +15156,7 @@ function copyText(text) {
     inp.select();
     document.execCommand('copy');
     document.body.removeChild(inp);
-    showToast('Link skopírovaný!', 'success');
+    showToast(t('toast.link_skopirovany'), 'success');
   });
 }
 
@@ -15052,7 +15167,7 @@ async function viewRemoteSignature(token) {
     const r = await secureFetch('/api/sign/list?detail=' + token, {
       headers: { 'Authorization': 'Bearer ' + sessionToken },
     });
-    if (!r.ok) { showToast('Nepodarilo sa načítať podpis', 'error'); return; }
+    if (!r.ok) { showToast(t('toast.nepodarilo_sa_nacitat_podpis'), 'error'); return; }
     const data = await r.json();
     const rec = data.record;
     if (!rec) return;
@@ -15074,7 +15189,7 @@ async function viewRemoteSignature(token) {
       ${rec.signatureDataUrl ? '<div class="row" style="margin-top:1rem;"><b>Podpis:</b></div><img src="' + rec.signatureDataUrl + '" />' : ''}
     </div></body></html>`);
   } catch (e) {
-    showToast('Chyba pri načítaní', 'error');
+    showToast(t('toast.chyba_pri_nacitani'), 'error');
   }
 }
 
@@ -15125,7 +15240,7 @@ async function submitRemoteSignRequest() {
   const signerName = document.getElementById('rs-signer-name').value.trim();
 
   if (!signerName) {
-    showToast('Vyplňte meno klienta', 'warning');
+    showToast(t('toast.vyplnte_meno_klienta'), 'warning');
     return;
   }
 
@@ -15137,7 +15252,7 @@ async function submitRemoteSignRequest() {
   const expiresInHours = parseInt((document.getElementById('rs-expires-select')?.value) || '48');
 
   const token = getStoredToken();
-  if (!token) { showToast('Nie ste prihlásený', 'error'); return; }
+  if (!token) { showToast(t('toast.nie_ste_prihlaseny'), 'error'); return; }
 
   btn.disabled = true;
   btn.textContent = 'Vytváram...';
@@ -15170,7 +15285,7 @@ async function submitRemoteSignRequest() {
         expiresAt: data.expiresAt,
       });
     } else {
-      showToast(data.error || 'Chyba pri vytváraní', 'error');
+      showToast(errMsg(data, 'Chyba pri vytváraní'), 'error');
       btn.disabled = false;
       btn.textContent = 'Pokračovať na email →';
     }
@@ -15926,7 +16041,7 @@ async function _emailComposerEnsureLink() {
 
   const token = (typeof getStoredToken === 'function') ? getStoredToken() : null;
   if (!token) {
-    showToast('Nie ste prihlásený', 'error');
+    showToast(t('toast.nie_ste_prihlaseny'), 'error');
     return null;
   }
 
@@ -15938,7 +16053,7 @@ async function _emailComposerEnsureLink() {
   const expiresInHours = parseInt(document.getElementById('ec-expires').value);
 
   if (!signerName) {
-    showToast('Vyplňte meno klienta', 'warning');
+    showToast(t('toast.vyplnte_meno_klienta'), 'warning');
     return null;
   }
 
@@ -15974,7 +16089,7 @@ async function _emailComposerEnsureLink() {
     });
     const data = await r.json();
     if (!data.ok) {
-      showToast(data.error || 'Chyba pri vytváraní odkazu', 'error');
+      showToast(errMsg(data, 'Chyba pri vytváraní odkazu'), 'error');
       return null;
     }
     _emailComposerCtx.signUrl = data.signUrl;
@@ -16136,7 +16251,7 @@ async function emailComposerCopy() {
           'text/html':  new Blob([html], { type: 'text/html' }),
         })
       ]);
-      showToast('Skopírované — vložte do Gmail/Outlook compose ✓', 'success');
+      showToast(t('toast.skopirovane_vlozte_do_gmail_outlook_compose'), 'success');
     } else {
       // Older browser fallback
       if (typeof copyText === 'function') copyText(text);
@@ -16225,7 +16340,7 @@ async function emailComposerCopySigningLinkOnly() {
   const url = await _emailComposerEnsureLink();
   if (!url) return;
   if (typeof copyText === 'function') copyText(url);
-  showToast('Odkaz skopírovaný do schránky ✓', 'success');
+  showToast(t('toast.odkaz_skopirovany_do_schranky'), 'success');
 }
 
 function _rememberEmailSendChannel(ch) {
